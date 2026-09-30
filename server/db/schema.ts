@@ -136,3 +136,37 @@ export const transactionItems = pgTable(
     index("transaction_items_transaction_id_idx").on(t.transactionId),
   ],
 );
+
+// Pembatas login (diisi action login, bukan Better Auth). Satu baris = satu percobaan
+// yang gagal / sedang berjalan dalam jendela 15 menit; login sukses menghapus barisnya.
+
+export const loginGagalUsername = pgTable(
+  "login_gagal_username",
+  {
+    id: bigint("id", { mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    username: text("username").notNull(),
+    waktu: timestamp("waktu", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("login_gagal_username_username_waktu_idx").on(
+      t.username,
+      t.waktu.desc().nullsFirst(),
+    ),
+  ],
+);
+
+export const loginGagalIp = pgTable(
+  "login_gagal_ip",
+  {
+    id: bigint("id", { mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    ip: text("ip").notNull(),
+    waktu: timestamp("waktu", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("login_gagal_ip_ip_waktu_idx").on(t.ip, t.waktu.desc().nullsFirst()),
+  ],
+);
