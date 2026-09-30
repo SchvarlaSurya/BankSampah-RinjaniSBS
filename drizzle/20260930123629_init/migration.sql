@@ -5,7 +5,10 @@ CREATE TABLE "transaction_items" (
 	"berat" numeric(10,2) NOT NULL,
 	"harga_snapshot" integer NOT NULL,
 	"subtotal" integer NOT NULL,
-	CONSTRAINT "transaction_items_berat_positif" CHECK ("berat" > 0)
+	CONSTRAINT "transaction_items_berat_positif" CHECK ("berat" > 0),
+	CONSTRAINT "transaction_items_harga_snapshot_positif" CHECK ("harga_snapshot" > 0),
+	CONSTRAINT "transaction_items_subtotal_positif" CHECK ("subtotal" > 0),
+	CONSTRAINT "transaction_items_subtotal_konsisten" CHECK ("subtotal" = round("berat" * "harga_snapshot"))
 );
 --> statement-breakpoint
 CREATE TABLE "transactions" (
@@ -82,7 +85,8 @@ CREATE TABLE "user" (
 	"display_username" text,
 	"role" text DEFAULT 'nasabah' NOT NULL,
 	"must_change_password" boolean DEFAULT true NOT NULL,
-	"aktif" boolean DEFAULT true NOT NULL
+	"aktif" boolean DEFAULT true NOT NULL,
+	CONSTRAINT "user_role_valid" CHECK ("role" IN ('super_admin', 'admin', 'nasabah'))
 );
 --> statement-breakpoint
 CREATE TABLE "verification" (
@@ -95,8 +99,9 @@ CREATE TABLE "verification" (
 );
 --> statement-breakpoint
 CREATE INDEX "transaction_items_transaction_id_idx" ON "transaction_items" ("transaction_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "transactions_hash_foto_unique" ON "transactions" ("hash_foto") WHERE "hash_foto" IS NOT NULL;--> statement-breakpoint
+CREATE INDEX "transactions_hash_foto_idx" ON "transactions" ("hash_foto");--> statement-breakpoint
 CREATE INDEX "transactions_customer_id_idx" ON "transactions" ("customer_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "waste_types_nama_unique" ON "waste_types" (lower(btrim("nama")));--> statement-breakpoint
 CREATE INDEX "account_userId_idx" ON "account" ("user_id");--> statement-breakpoint
 CREATE INDEX "session_userId_idx" ON "session" ("user_id");--> statement-breakpoint
 CREATE INDEX "verification_identifier_idx" ON "verification" ("identifier");--> statement-breakpoint
