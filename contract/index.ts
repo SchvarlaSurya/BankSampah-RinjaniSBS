@@ -1,4 +1,6 @@
 /**
+ * src/contract/index.ts
+ *
  * KONTRAK BACKEND <-> FRONTEND — Bank Sampah, Fase 1
  * Versi: 1.0
  *
@@ -28,7 +30,6 @@ import { z } from "zod";
  * - BeratStr  : string desimal SELALU 2 angka di belakang titik, "12.50".
  *               Jangan diubah ke float untuk dihitung uangnya.
  * - IsoUtc    : string ISO-8601 UTC, "2026-09-30T12:21:08.000Z".
- * 
  *               Tampilkan di UI dengan zona Asia/Jakarta.
  */
 export type IdStr = string;
