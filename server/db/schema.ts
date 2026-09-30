@@ -22,18 +22,25 @@ export * from "./auth-schema";
 export const wasteTypes = pgTable(
   "waste_types",
   {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    id: bigint("id", { mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
     nama: text("nama").notNull(),
     hargaBeli: integer("harga_beli").notNull(),
     aktif: boolean("aktif").notNull().default(true),
   },
-  (t) => [check("waste_types_harga_beli_positif", sql`${t.hargaBeli} > 0`)],
+  (t) => [
+    check("waste_types_harga_beli_positif", sql`${t.hargaBeli} > 0`),
+    uniqueIndex("waste_types_nama_unique").on(sql`lower(btrim(${t.nama}))`),
+  ],
 );
 
 export const transactions = pgTable(
   "transactions",
   {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    id: bigint("id", { mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
     customerId: text("customer_id")
       .notNull()
       .references(() => user.id),
@@ -83,9 +90,9 @@ export const transactions = pgTable(
         AND btrim(${t.catatan}) <> ''
       )`,
     ),
-    uniqueIndex("transactions_hash_foto_unique")
-      .on(t.hashFoto)
-      .where(sql`${t.hashFoto} IS NOT NULL`),
+    // Bukan UNIQUE: hash boleh dipakai ulang setelah setor sebelumnya dibalik.
+    // Keunikan "hash aktif" dijaga fungsi setor() dengan advisory lock.
+    index("transactions_hash_foto_idx").on(t.hashFoto),
     index("transactions_customer_id_idx").on(t.customerId),
   ],
 );
@@ -93,7 +100,9 @@ export const transactions = pgTable(
 export const transactionItems = pgTable(
   "transaction_items",
   {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    id: bigint("id", { mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
     transactionId: bigint("transaction_id", { mode: "number" })
       .notNull()
       .references(() => transactions.id),
@@ -106,6 +115,15 @@ export const transactionItems = pgTable(
   },
   (t) => [
     check("transaction_items_berat_positif", sql`${t.berat} > 0`),
+    check(
+      "transaction_items_harga_snapshot_positif",
+      sql`${t.hargaSnapshot} > 0`,
+    ),
+    check("transaction_items_subtotal_positif", sql`${t.subtotal} > 0`),
+    check(
+      "transaction_items_subtotal_konsisten",
+      sql`${t.subtotal} = round(${t.berat} * ${t.hargaSnapshot})`,
+    ),
     index("transaction_items_transaction_id_idx").on(t.transactionId),
   ],
 );

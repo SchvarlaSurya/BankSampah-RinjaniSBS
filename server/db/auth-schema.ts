@@ -1,27 +1,45 @@
-// Digenerate oleh `npx auth generate` (lihat server/auth.ts). Satu-satunya edit manual:
-// drizzle-orm v1 memindah API relations lama ke "drizzle-orm/_relations".
+// Digenerate oleh `npx auth generate` (lihat server/auth.ts). Edit manual (ulangi setelah regenerate):
+// 1. drizzle-orm v1 memindah API relations lama ke "drizzle-orm/_relations".
+// 2. CHECK user_role_valid: enum Better Auth hanya berlaku di TypeScript.
+import { sql } from "drizzle-orm";
 import { relations } from "drizzle-orm/_relations";
-import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  boolean,
+  index,
+  check,
+} from "drizzle-orm/pg-core";
 
-export const user = pgTable("user", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  emailVerified: boolean("email_verified").default(false).notNull(),
-  image: text("image"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-  username: text("username").unique(),
-  displayUsername: text("display_username"),
-  role: text("role", { enum: ["super_admin", "admin", "nasabah"] })
-    .default("nasabah")
-    .notNull(),
-  mustChangePassword: boolean("must_change_password").default(true).notNull(),
-  aktif: boolean("aktif").default(true).notNull(),
-});
+export const user = pgTable(
+  "user",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    emailVerified: boolean("email_verified").default(false).notNull(),
+    image: text("image"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+    username: text("username").unique(),
+    displayUsername: text("display_username"),
+    role: text("role", { enum: ["super_admin", "admin", "nasabah"] })
+      .default("nasabah")
+      .notNull(),
+    mustChangePassword: boolean("must_change_password").default(true).notNull(),
+    aktif: boolean("aktif").default(true).notNull(),
+  },
+  (table) => [
+    check(
+      "user_role_valid",
+      sql`${table.role} IN ('super_admin', 'admin', 'nasabah')`,
+    ),
+  ],
+);
 
 export const session = pgTable(
   "session",
