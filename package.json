@@ -10,7 +10,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:local:up": "docker compose up -d --wait db",
-    "db:local:down": "docker compose down"
+    "db:local:down": "docker compose down",
+    "test:db": "node scripts/test-db.mjs",
+    "typecheck:test": "tsc --noEmit -p tests/db"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -39,6 +41,7 @@
     "eslint-config-next": "16.3.7",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "4.1.11"
   }
 }
