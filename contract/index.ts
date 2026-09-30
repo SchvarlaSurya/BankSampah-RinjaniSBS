@@ -1,4 +1,6 @@
 /**
+ * src/contract/index.ts
+ *
  * KONTRAK BACKEND <-> FRONTEND — Bank Sampah, Fase 1
  * Versi: 1.0
  *
