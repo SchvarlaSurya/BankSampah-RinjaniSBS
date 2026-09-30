@@ -22,6 +22,7 @@ CREATE TABLE "transactions" (
 	"reverses_id" bigint CONSTRAINT "transactions_reverses_id_unique" UNIQUE,
 	"path_foto" text,
 	"hash_foto" text,
+	"client_request_id" uuid NOT NULL CONSTRAINT "transactions_client_request_id_unique" UNIQUE,
 	CONSTRAINT "transactions_tipe_valid" CHECK ("tipe" IN ('setor', 'tarik', 'koreksi')),
 	CONSTRAINT "transactions_jumlah_bukan_nol" CHECK ("jumlah" <> 0),
 	CONSTRAINT "transactions_setor_valid" CHECK ("tipe" <> 'setor' OR (
@@ -100,7 +101,9 @@ CREATE TABLE "verification" (
 --> statement-breakpoint
 CREATE INDEX "transaction_items_transaction_id_idx" ON "transaction_items" ("transaction_id");--> statement-breakpoint
 CREATE INDEX "transactions_hash_foto_idx" ON "transactions" ("hash_foto");--> statement-breakpoint
-CREATE INDEX "transactions_customer_id_idx" ON "transactions" ("customer_id");--> statement-breakpoint
+CREATE INDEX "transactions_customer_id_id_idx" ON "transactions" ("customer_id","id" DESC);--> statement-breakpoint
+CREATE INDEX "transactions_dibuat_oleh_id_idx" ON "transactions" ("dibuat_oleh","id" DESC);--> statement-breakpoint
+CREATE INDEX "transactions_waktu_idx" ON "transactions" ("waktu" DESC);--> statement-breakpoint
 CREATE UNIQUE INDEX "waste_types_nama_unique" ON "waste_types" (lower(btrim("nama")));--> statement-breakpoint
 CREATE INDEX "account_userId_idx" ON "account" ("user_id");--> statement-breakpoint
 CREATE INDEX "session_userId_idx" ON "session" ("user_id");--> statement-breakpoint
