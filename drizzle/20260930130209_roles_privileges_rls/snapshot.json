@@ -1,7 +1,7 @@
 {
-  "id": "7639628c-8743-4550-956d-440170f84f68",
+  "id": "e2cc3190-c374-41f7-a28c-8558b6441569",
   "prevIds": [
-    "f1259164-495f-484b-a6e8-55ecd08f6b0f"
+    "fee4281c-574a-4b95-b525-d67a74ea7329"
   ],
   "version": "8",
   "dialect": "postgres",
@@ -270,6 +270,19 @@
       "generated": null,
       "identity": null,
       "name": "hash_foto",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "transactions"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "client_request_id",
       "entityType": "columns",
       "schema": "public",
       "table": "transactions"
@@ -893,6 +906,13 @@
           "asc": true,
           "nullsFirst": false,
           "opclass": null
+        },
+        {
+          "value": "id",
+          "isExpression": false,
+          "asc": false,
+          "nullsFirst": true,
+          "opclass": null
         }
       ],
       "isUnique": false,
@@ -900,7 +920,56 @@
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "transactions_customer_id_idx",
+      "name": "transactions_customer_id_id_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "transactions"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "dibuat_oleh",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "id",
+          "isExpression": false,
+          "asc": false,
+          "nullsFirst": true,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "transactions_dibuat_oleh_id_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "transactions"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "waktu",
+          "isExpression": false,
+          "asc": false,
+          "nullsFirst": true,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "transactions_waktu_idx",
       "entityType": "indexes",
       "schema": "public",
       "table": "transactions"
@@ -1185,6 +1254,17 @@
       ],
       "nullsNotDistinct": false,
       "name": "transactions_reverses_id_unique",
+      "schema": "public",
+      "table": "transactions",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "client_request_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "transactions_client_request_id_unique",
       "schema": "public",
       "table": "transactions",
       "entityType": "uniques"

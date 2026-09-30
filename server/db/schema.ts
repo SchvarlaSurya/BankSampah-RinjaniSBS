@@ -11,6 +11,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
 
@@ -57,6 +58,11 @@ export const transactions = pgTable(
     ),
     pathFoto: text("path_foto"),
     hashFoto: text("hash_foto"),
+    // Idempotency key dari klien (contract: clientRequestId). Retry dengan UUID
+    // yang sama mengembalikan transaksi asli, bukan membuat transaksi baru.
+    clientRequestId: uuid("client_request_id")
+      .notNull()
+      .unique("transactions_client_request_id_unique"),
   },
   (t) => [
     foreignKey({
@@ -93,7 +99,10 @@ export const transactions = pgTable(
     // Bukan UNIQUE: hash boleh dipakai ulang setelah setor sebelumnya dibalik.
     // Keunikan "hash aktif" dijaga fungsi setor() dengan advisory lock.
     index("transactions_hash_foto_idx").on(t.hashFoto),
-    index("transactions_customer_id_idx").on(t.customerId),
+    // Histori per nasabah & audit super_admin, terbaru dulu (cursor = id).
+    index("transactions_customer_id_id_idx").on(t.customerId, t.id.desc().nullsFirst()),
+    index("transactions_dibuat_oleh_id_idx").on(t.dibuatOleh, t.id.desc().nullsFirst()),
+    index("transactions_waktu_idx").on(t.waktu.desc().nullsFirst()),
   ],
 );
 
