@@ -1,5 +1,5 @@
 import "server-only";
-import { env } from "../env";
+import { env } from "../konfigurasi";
 import { fotoStorageLokal } from "./lokal";
 import { fotoStorageSupabase } from "./supabase";
 

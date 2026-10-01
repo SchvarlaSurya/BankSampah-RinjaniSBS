@@ -1,5 +1,5 @@
 import postgres from "postgres";
-import { urlTesDb } from "./env";
+import { urlTesDb } from "./url-tes";
 
 // Dijalankan sekali sebelum semua file tes. Migration dijalankan oleh `npm run test:db`
 // (scripts/test-db.mjs); di sini hanya verifikasi & password app_server lokal.

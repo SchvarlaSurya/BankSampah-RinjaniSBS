@@ -1,5 +1,5 @@
 import "server-only";
-import { env } from "../env";
+import { env } from "../konfigurasi";
 import { sesiDariCookie } from "../guards";
 import { fotoStorageLokal, POLA_NAMA_FOTO, urlLokalSah } from "./lokal";
 

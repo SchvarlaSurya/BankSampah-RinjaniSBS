@@ -1,11 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildSetorFormData, fail, LIMIT, type MutasiResult, type SetorInput } from "@/contract";
 import { koreksi, setor, tarik } from "@/server/api/actions";
 import { getTransaksi } from "@/server/api/queries";
+import { fotoStorage } from "@/server/foto/storage";
 import { bukaKoneksi } from "../db/clients";
 import { buatJenis } from "../db/factories";
-import { type Akun, buatAkun, masuk, sbg } from "./akun";
+import { type Akun, buatAkun, masuk, sbg, tangkapLog } from "./akun";
 import { bytesJpeg, bytesPng, bytesWebp, fileFoto, isiDirFoto } from "./foto";
 import { Browser } from "./next-headers-mock";
 
@@ -282,5 +283,33 @@ describe("koreksi", () => {
     );
     const pendek = await sbg(k.superAdmin, () => koreksi({ transaksiId: s2.data.transaksi.id, alasan: "ab", clientRequestId: r() }));
     expect(!pendek.ok && pendek.code).toBe("VALIDASI_GAGAL");
+  });
+});
+
+describe("kode umum lewat lapisan action", () => {
+  it("mustChangePassword -> WAJIB_GANTI_PASSWORD pada setor/tarik/koreksi", async () => {
+    const b = await masuk(await buatAkun("super_admin", { mustChangePassword: true }));
+    const r = () => randomUUID();
+    expect(await sbg(b, () => setor(formSetor()))).toEqual(fail("WAJIB_GANTI_PASSWORD"));
+    expect(await sbg(b, () => tarik({ customerId: k.nasabah.userId, jumlah: 1, clientRequestId: r() }))).toEqual(fail("WAJIB_GANTI_PASSWORD"));
+    expect(await sbg(b, () => koreksi({ transaksiId: "1", alasan: "apa saja", clientRequestId: r() }))).toEqual(fail("WAJIB_GANTI_PASSWORD"));
+  });
+
+  it("kegagalan tak terduga -> SERVER_ERROR (tanpa throw); log tidak memuat nama file foto", async () => {
+    const storage = fotoStorage();
+    const spy = vi.spyOn(storage, "simpan").mockRejectedValueOnce(new Error("disk penuh"));
+    const log = tangkapLog();
+    let hasil: Awaited<ReturnType<typeof setor>>;
+    try {
+      hasil = await sbg(k.admin, () => setor(formSetor()));
+    } finally {
+      log.pulihkan();
+      spy.mockRestore();
+    }
+    expect(hasil).toEqual(fail("SERVER_ERROR"));
+    const semua = log.pesan.join("\n");
+    expect(semua).toContain("[setor]");
+    expect(semua).toContain("disk penuh");
+    expect(semua).not.toMatch(/[a-f0-9-]{36}\.jpg/);
   });
 });

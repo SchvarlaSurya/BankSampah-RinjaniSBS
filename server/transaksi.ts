@@ -17,7 +17,7 @@ const pembuat = alias(user, "pembuat");
  * dengan sengaja: pada select satu tabel drizzle merender ${transactions.id} sebagai "id"
  * saja, yang di dalam subquery akan terbaca sebagai kolom tabel subquery itu sendiri.
  */
-export const idLuar = sql.raw(`"transactions"."id"`);
+const idLuar = sql.raw(`"transactions"."id"`);
 const dibuatOlehLuar = sql.raw(`"transactions"."dibuat_oleh"`);
 
 /** true bila sudah ada koreksi yang membalik transaksi ini. */

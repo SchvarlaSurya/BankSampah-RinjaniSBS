@@ -1,7 +1,7 @@
 import "server-only";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { env } from "../env";
+import { env } from "../konfigurasi";
 
 // Supavisor transaction mode tidak mendukung prepared statement.
 const createClient = () => postgres(env.DATABASE_URL, { prepare: false });

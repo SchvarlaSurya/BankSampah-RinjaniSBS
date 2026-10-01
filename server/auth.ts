@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 import { LIMIT } from "@/contract";
 import { db } from "./db";
 import { account, session, user, verification } from "./db/auth-schema";
-import { env } from "./env";
+import { env } from "./konfigurasi";
 
 /**
  * Handler HTTP Better Auth (/api/auth/*) sengaja TIDAK di-mount: semua jalur auth lewat

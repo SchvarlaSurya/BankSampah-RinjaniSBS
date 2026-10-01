@@ -194,6 +194,6 @@ describe("J. berbasis model", () => {
     expect(minus.n).toBe(0);
 
     console.log(`[J] statistik ${JSON.stringify(statistik)}`);
-    console.log(`[J] saldo akhir ${JSON.stringify(Object.fromEntries([...saldoModel].map(([k, v], i) => [`nasabah${i + 1}`, v.toString()])))}`);
+    console.log(`[J] saldo akhir ${JSON.stringify(Object.fromEntries([...saldoModel.values()].map((v, i) => [`nasabah${i + 1}`, v.toString()])))}`);
   });
 });

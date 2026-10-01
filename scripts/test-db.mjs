@@ -4,7 +4,7 @@
 //   Hanya reset + migrate (untuk pengecekan manual).
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { urlTesDb } from "../tests/db/env.ts";
+import { urlTesDb } from "../tests/db/url-tes.ts";
 
 // Entry CLI tidak diekspor lewat "exports" paket, jadi pakai path langsung.
 const bin = (rel) => fileURLToPath(new URL(`../node_modules/${rel}`, import.meta.url));

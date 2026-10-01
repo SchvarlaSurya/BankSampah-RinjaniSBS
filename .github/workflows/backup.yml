@@ -1,0 +1,75 @@
+# Backup harian database produksi (Supabase), dienkripsi dengan age lalu disimpan sebagai
+# artifact 14 hari. Butuh secret:
+#   SUPABASE_DB_URL       koneksi LANGSUNG / session pooler (port 5432) sebagai role owner.
+#                         Jangan pooler transaction mode (6543): pg_dump butuh sesi utuh.
+#   BACKUP_AGE_RECIPIENT  PUBLIC key age (age1...). Private key-nya disimpan di luar GitHub.
+# Restore & verifikasi: scripts/restore-backup.md. BELUM TERUJI terhadap Supabase.
+name: Backup DB
+
+on:
+  schedule:
+    - cron: "0 19 * * *" # 02:00 WIB
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-db
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Pasang pg_dump 17 (PGDG) dan age
+        run: |
+          set -euo pipefail
+          sudo apt-get update -q
+          sudo apt-get install -y -q curl ca-certificates lsb-release age
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-client-17
+
+      - name: Dump terenkripsi + ringkasan untuk verifikasi
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL}" ] || [ -z "${BACKUP_AGE_RECIPIENT}" ]; then
+            echo "Secret SUPABASE_DB_URL / BACKUP_AGE_RECIPIENT belum diisi." >&2
+            exit 1
+          fi
+          BIN=/usr/lib/postgresql/17/bin
+          NAMA="bank-sampah-$(date -u +%Y%m%dT%H%M%SZ).dump.age"
+          # Plaintext tidak pernah ditulis ke disk: pg_dump langsung disalurkan ke age.
+          "$BIN/pg_dump" --dbname="$SUPABASE_DB_URL" --format=custom --no-owner --no-privileges \
+              --schema=public --schema=drizzle \
+            | age --encrypt --recipient "$BACKUP_AGE_RECIPIENT" --output "$NAMA"
+          echo "NAMA_BACKUP=$NAMA" >> "$GITHUB_ENV"
+          # Angka agregat (tanpa data pribadi) untuk dibandingkan setelah restore.
+          {
+            echo "### Ringkasan backup $NAMA"
+            echo '```'
+            "$BIN/psql" "$SUPABASE_DB_URL" -X -A -F ' | ' -c "
+              select 'user' as tabel, count(*) from public.\"user\"
+              union all select 'waste_types', count(*) from public.waste_types
+              union all select 'transactions', count(*) from public.transactions
+              union all select 'transaction_items', count(*) from public.transaction_items;"
+            "$BIN/psql" "$SUPABASE_DB_URL" -X -A -F ' | ' -c "
+              select coalesce(sum(saldo), 0) as total_saldo, count(*) filter (where saldo < 0) as saldo_minus
+              from public.saldo_nasabah;"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backup-db-${{ github.run_id }}
+          path: ${{ env.NAMA_BACKUP }}
+          retention-days: 14
+          if-no-files-found: error

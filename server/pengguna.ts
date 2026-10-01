@@ -18,7 +18,7 @@ export function buatPasswordSementara(panjang = 10): string {
 }
 
 /** Better Auth mewajibkan email unik; pengguna bank sampah tidak memakai email. */
-export const emailBuatan = (username: string) =>
+const emailBuatan = (username: string) =>
   `${username}@bank-sampah.invalid`;
 
 /**

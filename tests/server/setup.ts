@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { vi } from "vitest";
-import { urlTesDb } from "../db/env";
+import { urlTesDb } from "../db/url-tes";
 
 // Env untuk kode server/** saat tes. DATABASE_URL SELALU ditimpa ke DB tes lokal (app_server),
 // jadi nilai dari shell / .env tidak pernah dipakai.

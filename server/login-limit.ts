@@ -75,10 +75,6 @@ export async function percobaanBerhasil(
  * pada kolom waktu, dan hanya dijalankan pada percobaan gagal.
  */
 export async function percobaanGagal(): Promise<void> {
-  await bersihkanBarisLama();
-}
-
-export async function bersihkanBarisLama(): Promise<void> {
   await db.delete(loginGagalUsername).where(lt(loginGagalUsername.waktu, batasJendela));
   await db.delete(loginGagalIp).where(lt(loginGagalIp.waktu, batasJendela));
 }
