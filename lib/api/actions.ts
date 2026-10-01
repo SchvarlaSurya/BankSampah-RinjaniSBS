@@ -13,7 +13,7 @@
  * boleh mengekspor fungsi async, bukan objek.
  */
 
-import { mockActions as a } from "./mock/actions"; // ← MOCK (aktif)
-// import { realActions as a } from "@/server/api/real-actions"; // ← ASLI
+// import { mockActions as a } from "./mock/actions"; // ← MOCK
+import { realActions as a } from "@/server/api/real-actions"; // ← ASLI (aktif)
 
 export const actions = a;

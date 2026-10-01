@@ -12,7 +12,7 @@
  * Server Component (kontrak Bagian 9). Client Component menerima datanya lewat props.
  */
 
-import { mockQueries as q } from "./mock/queries"; // ← MOCK (aktif)
-// import { realQueries as q } from "@/server/api/queries"; // ← ASLI
+// import { mockQueries as q } from "./mock/queries"; // ← MOCK
+import { realQueries as q } from "@/server/api/queries"; // ← ASLI (aktif)
 
 export const queries = q;
