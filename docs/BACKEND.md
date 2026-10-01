@@ -155,7 +155,8 @@ dan tes.
 ## BELUM TERUJI
 
 - Supabase asli: migration, role `app_server` lewat Supavisor, RLS/policy, `pg_dump` di
-  workflow backup, restore (`scripts/restore-backup.md`).
+  workflow backup. Restore TERUJI di Docker lokal (`scripts/restore-backup.md`), WAJIB diikuti
+  `scripts/pasca-restore-hak-akses.sql`; restore ke Supabase belum diuji.
 - Pembacaan IP di Vercel (`x-vercel-forwarded-for`), termasuk apakah header kiriman klien
   dibuang. Cara uji di preview deploy: login gagal dengan header palsu
   `x-vercel-forwarded-for: 203.0.113.9`, lalu `select ip from login_gagal_ip order by id desc`

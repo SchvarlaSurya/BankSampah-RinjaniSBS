@@ -3,7 +3,8 @@
 #   SUPABASE_DB_URL       koneksi LANGSUNG / session pooler (port 5432) sebagai role owner.
 #                         Jangan pooler transaction mode (6543): pg_dump butuh sesi utuh.
 #   BACKUP_AGE_RECIPIENT  PUBLIC key age (age1...). Private key-nya disimpan di luar GitHub.
-# Restore & verifikasi: scripts/restore-backup.md. BELUM TERUJI terhadap Supabase.
+# Restore & verifikasi: scripts/restore-backup.md (teruji di Docker lokal; setelah restore WAJIB
+# scripts/pasca-restore-hak-akses.sql karena dump --no-privileges). BELUM TERUJI terhadap Supabase.
 name: Backup DB
 
 on:
