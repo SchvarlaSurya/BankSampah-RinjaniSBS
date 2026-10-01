@@ -3,8 +3,11 @@ import postgres from "postgres";
 import { env } from "../env";
 
 // Supavisor transaction mode tidak mendukung prepared statement.
-const createClient = () =>
-  postgres(process.env.DATABASE_URL || env.DATABASE_URL, { prepare: false });
+const createClient = () => {
+  const url = process.env.DATABASE_URL || env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/postgres";
+  const safeUrl = url.includes("<") ? "postgresql://postgres:postgres@localhost:5432/postgres" : url;
+  return postgres(safeUrl, { prepare: false });
+};
 
 // Singleton pattern untuk pgClient dan instance Drizzle db di Node.js / dev hot reload.
 const globalForDb = globalThis as unknown as {

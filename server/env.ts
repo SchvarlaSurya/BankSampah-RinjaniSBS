@@ -13,9 +13,6 @@ const httpUrl = z
   .pipe(z.url({ protocol: /^https?$/ }));
 
 const schema = z.object({
-<<<<<<< HEAD
-  DATABASE_URL: postgresUrl.default("postgresql://postgres:postgres@localhost:5432/postgres"),
-=======
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
@@ -33,7 +30,6 @@ const schema = z.object({
         .filter(Boolean),
     )
     .pipe(z.array(httpUrl)),
->>>>>>> 28f6e5e89bd243283221025667e3b6385866e5c0
 });
 
 const parsed = schema.safeParse({
@@ -41,8 +37,13 @@ const parsed = schema.safeParse({
   DATABASE_URL: process.env.DATABASE_URL || undefined,
 });
 
-if (!parsed.success) {
+const isBuild =
+  process.env.npm_lifecycle_event === "build" ||
+  !!process.env.SKIP_ENV_VALIDATION ||
+  process.env.NEXT_PHASE === "phase-production-build";
+
+if (!parsed.success && !isBuild) {
   throw new Error(`Env tidak valid:\n${z.prettifyError(parsed.error)}`);
 }
 
-export const env = parsed.data;
+export const env = parsed.success ? parsed.data : (process.env as any);
