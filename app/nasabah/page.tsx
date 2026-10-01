@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { queries } from "@/src/lib/api/queries";
-import { formatRupiah, redirectUntukError } from "@/src/contract";
+import { queries } from "@/lib/api/queries";
+import { formatRupiah, redirectUntukError } from "@/contract";
 import { Wallet, History, ArrowDownLeft, ArrowUpRight, RotateCcw, ChevronRight, User } from "lucide-react";
 
 export default async function NasabahDashboardPage() {

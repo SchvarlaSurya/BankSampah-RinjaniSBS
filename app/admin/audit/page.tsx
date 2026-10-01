@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { queries } from "@/src/lib/api/queries";
-import { formatRupiah, redirectUntukError } from "@/src/contract";
+import { queries } from "@/lib/api/queries";
+import { formatRupiah, redirectUntukError } from "@/contract";
 import { FileCheck, Calendar, User, Scale, ImageIcon } from "lucide-react";
 
 export default async function AuditTransaksiPage() {

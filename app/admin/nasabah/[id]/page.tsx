@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { queries } from "@/src/lib/api/queries";
-import { formatRupiah, ERROR_MESSAGES, redirectUntukError } from "@/src/contract";
+import { queries } from "@/lib/api/queries";
+import { formatRupiah, ERROR_MESSAGES, redirectUntukError } from "@/contract";
 import { 
   UserCheck, 
   Wallet, 

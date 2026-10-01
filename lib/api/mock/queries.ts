@@ -1,22 +1,15 @@
 /**
- * src/lib/api/mock/queries.ts
+ * lib/api/mock/queries.ts
  *
- * Implementasi MOCK dari interface Queries.
+ * Implementasi MOCK dari interface Queries (server-only, sama seperti implementasi asli).
  * Semua data berasal dari _store.ts (in-memory).
- * Hanya dipakai di development — jangan diimpor langsung dari halaman UI.
- * Import lewat saklar: src/lib/api/queries.ts
+ * Jangan diimpor langsung dari halaman UI — lewat saklar lib/api/queries.ts.
  */
 
-import type { Queries, TransaksiRingkas } from "@/src/contract";
-import { ok, fail } from "@/src/contract";
-import {
-  activeSesi,
-  mockNasabah,
-  mockStaf,
-  mockJenisSampah,
-  mockTransaksi,
-  allUsersById,
-} from "./_store";
+import "server-only";
+import type { Queries, TransaksiRingkas } from "@/contract";
+import { ok, fail } from "@/contract";
+import { store } from "./_store";
 
 /** Delay palsu agar terasa realistis (50ms). */
 const delay = () => new Promise<void>((r) => setTimeout(r, 50));
@@ -24,24 +17,26 @@ const delay = () => new Promise<void>((r) => setTimeout(r, 50));
 export const mockQueries: Queries = {
   async getSesi() {
     await delay();
-    return activeSesi;
+    return store.sesi;
   },
 
   async getProfilSaya() {
     await delay();
-    if (!activeSesi) return fail("TIDAK_LOGIN");
-    if (activeSesi.role !== "nasabah") return fail("TIDAK_DIIZINKAN");
-    const profil = mockNasabah.find((n) => n.id === activeSesi!.userId);
+    const sesi = store.sesi;
+    if (!sesi) return fail("TIDAK_LOGIN");
+    if (sesi.role !== "nasabah") return fail("TIDAK_DIIZINKAN");
+    const profil = store.nasabah.find((n) => n.id === sesi.userId);
     if (!profil) return fail("NASABAH_TIDAK_DITEMUKAN");
     return ok(profil);
   },
 
   async cariNasabah({ query }) {
     await delay();
-    if (!activeSesi) return fail("TIDAK_LOGIN");
-    if (activeSesi.role === "nasabah") return fail("TIDAK_DIIZINKAN");
+    const sesi = store.sesi;
+    if (!sesi) return fail("TIDAK_LOGIN");
+    if (sesi.role === "nasabah") return fail("TIDAK_DIIZINKAN");
     const q = query.toLowerCase();
-    const hasil = mockNasabah
+    const hasil = store.nasabah
       .filter(
         (n) =>
           n.username.toLowerCase().startsWith(q) ||
@@ -53,42 +48,45 @@ export const mockQueries: Queries = {
 
   async getNasabah({ customerId }) {
     await delay();
-    if (!activeSesi) return fail("TIDAK_LOGIN");
-    if (activeSesi.role === "nasabah" && activeSesi.userId !== customerId) {
+    const sesi = store.sesi;
+    if (!sesi) return fail("TIDAK_LOGIN");
+    if (sesi.role === "nasabah" && sesi.userId !== customerId) {
       return fail("TIDAK_DIIZINKAN");
     }
-    const nasabah = mockNasabah.find((n) => n.id === customerId);
+    const nasabah = store.nasabah.find((n) => n.id === customerId);
     if (!nasabah) return fail("NASABAH_TIDAK_DITEMUKAN");
     return ok(nasabah);
   },
 
   async listJenisSampah(input) {
     await delay();
-    if (!activeSesi) return fail("TIDAK_LOGIN");
+    if (!store.sesi) return fail("TIDAK_LOGIN");
     const termasukNonaktif = input?.termasukNonaktif ?? false;
     const hasil = termasukNonaktif
-      ? mockJenisSampah
-      : mockJenisSampah.filter((j) => j.aktif);
+      ? store.jenisSampah
+      : store.jenisSampah.filter((j) => j.aktif);
     return ok(hasil);
   },
 
   async listStaf() {
     await delay();
-    if (!activeSesi) return fail("TIDAK_LOGIN");
-    if (activeSesi.role !== "super_admin") return fail("TIDAK_DIIZINKAN");
-    return ok(mockStaf);
+    const sesi = store.sesi;
+    if (!sesi) return fail("TIDAK_LOGIN");
+    if (sesi.role !== "super_admin") return fail("TIDAK_DIIZINKAN");
+    return ok(store.staf);
   },
 
   async getHistori({ customerId, cursor, limit = 20 }) {
     await delay();
-    if (!activeSesi) return fail("TIDAK_LOGIN");
-    if (activeSesi.role === "nasabah" && activeSesi.userId !== customerId) {
+    const sesi = store.sesi;
+    if (!sesi) return fail("TIDAK_LOGIN");
+    if (sesi.role === "nasabah" && sesi.userId !== customerId) {
       return fail("TIDAK_DIIZINKAN");
     }
-    const nasabah = allUsersById.get(customerId);
+    const nasabah = store.usersById.get(customerId);
     if (!nasabah) return fail("NASABAH_TIDAK_DITEMUKAN");
 
-    const semua = mockTransaksi
+    const semua = store.transaksi
       .filter((t) => t.customerId === customerId)
       .sort((a, b) => b.waktu.localeCompare(a.waktu));
 
@@ -116,21 +114,19 @@ export const mockQueries: Queries = {
 
   async getTransaksi({ id }) {
     await delay();
-    if (!activeSesi) return fail("TIDAK_LOGIN");
-    const transaksi = mockTransaksi.find((t) => t.id === id);
+    const sesi = store.sesi;
+    if (!sesi) return fail("TIDAK_LOGIN");
+    const transaksi = store.transaksi.find((t) => t.id === id);
     if (!transaksi) return fail("TRANSAKSI_TIDAK_DITEMUKAN");
-    if (
-      activeSesi.role === "nasabah" &&
-      transaksi.customerId !== activeSesi.userId
-    ) {
+    if (sesi.role === "nasabah" && transaksi.customerId !== sesi.userId) {
       return fail("TIDAK_DIIZINKAN");
     }
 
     // Hide fotoUrl if not super_admin
     const detail: typeof transaksi = {
       ...transaksi,
-      fotoUrl: activeSesi.role === "super_admin" ? transaksi.fotoUrl : null,
-      fotoUrlBerlakuHingga: activeSesi.role === "super_admin" ? transaksi.fotoUrlBerlakuHingga : null,
+      fotoUrl: sesi.role === "super_admin" ? transaksi.fotoUrl : null,
+      fotoUrlBerlakuHingga: sesi.role === "super_admin" ? transaksi.fotoUrlBerlakuHingga : null,
     };
 
     return ok(detail);
@@ -138,10 +134,11 @@ export const mockQueries: Queries = {
 
   async auditTransaksi(input) {
     await delay();
-    if (!activeSesi) return fail("TIDAK_LOGIN");
-    if (activeSesi.role !== "super_admin") return fail("TIDAK_DIIZINKAN");
+    const sesi = store.sesi;
+    if (!sesi) return fail("TIDAK_LOGIN");
+    if (sesi.role !== "super_admin") return fail("TIDAK_DIIZINKAN");
 
-    let semua = [...mockTransaksi].sort((a, b) =>
+    let semua = [...store.transaksi].sort((a, b) =>
       b.waktu.localeCompare(a.waktu)
     );
 

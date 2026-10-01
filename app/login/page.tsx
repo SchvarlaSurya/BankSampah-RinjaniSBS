@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { actions } from "@/src/lib/api/actions";
-import { ROUTES, ERROR_MESSAGES } from "@/src/contract";
+import { actions } from "@/lib/api/actions";
+import { ROUTES, ERROR_MESSAGES } from "@/contract";
 import { Recycle, Lock, User, AlertCircle, ArrowRight, Loader2 } from "lucide-react";
 
 export default function LoginPage() {

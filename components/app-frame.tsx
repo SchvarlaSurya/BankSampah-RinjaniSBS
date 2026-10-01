@@ -3,8 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { RoleNavigation } from "@/components/role-navigation";
-import { ROUTES, type SesiInfo } from "@/src/contract";
-import { actions } from "@/src/lib/api/actions";
+import { ROUTES, type SesiInfo } from "@/contract";
+import { actions } from "@/lib/api/actions";
 
 const roleLabel = {
   super_admin: "Super Admin",

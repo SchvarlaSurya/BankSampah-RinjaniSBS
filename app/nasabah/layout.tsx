@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { AppFrame } from "@/components/app-frame";
-import { ROUTES } from "@/src/contract";
-import { queries } from "@/src/lib/api/queries";
+import { ROUTES } from "@/contract";
+import { queries } from "@/lib/api/queries";
 
 export default async function NasabahLayout({
   children,

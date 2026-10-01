@@ -24,36 +24,30 @@ terduga → `SERVER_ERROR`, detail hanya di log server. Tidak ada `throw` ke pem
 
 ## Membalik saklar mock → asli
 
-Hanya dua file frontend yang berubah. **Path di komentar file saklar saat ini
-(`@/src/server/api/...`) salah**: backend ada di `server/`, bukan `src/server/`, dan file
-`"use server"` tidak boleh mengekspor objek.
+Hanya dua file frontend yang berubah (repo tanpa folder `src/`; satu kontrak di
+`contract/index.ts`, diimpor `@/contract`).
 
-`src/lib/api/actions.ts`:
+`lib/api/actions.ts`:
 
 ```ts
 import { realActions as a } from "@/server/api/real-actions";
 ```
 
-`src/lib/api/queries.ts`:
+`lib/api/queries.ts`:
 
 ```ts
 import { realQueries as q } from "@/server/api/queries";
 ```
 
-Setelah dibalik, perhatikan:
+Jangan arahkan ke `@/server/api/actions`: file `"use server"` tidak boleh mengekspor objek.
 
-1. **Query hanya boleh dipanggil dari Server Component** (kontrak Bagian 9; `queries.ts`
-   mengimpor `server-only`). Beberapa halaman `"use client"` sekarang memanggil `queries.*`
-   langsung (misalnya `app/admin/page.tsx`, `app/admin/jenis-sampah/page.tsx`,
-   `app/admin/pengguna/page.tsx`, `app/admin/nasabah/[id]/setor/page.tsx`,
-   `.../tarik/page.tsx`, `app/ganti-password/page.tsx`). Setelah saklar dibalik, build akan
-   gagal di halaman tersebut sampai datanya diambil di Server Component lalu dikirim sebagai
-   props. Ini belum dicoba (saklar tidak saya ubah).
-2. Ada dua salinan kontrak: `contract/index.ts` (dipakai backend, `@/contract`) dan
-   `src/contract/index.ts` (dipakai frontend, `@/src/contract`). Isinya sekarang sama, tetapi
-   bisa menyimpang. Sebaiknya disatukan lewat PR kontrak.
-3. Perilaku mock berbeda dari asli: mock mengembalikan `TIDAK_DIIZINKAN` untuk login akun
-   nonaktif, backend asli mengembalikan `KREDENSIAL_SALAH` (disengaja, lihat di bawah).
+- **Query hanya dipanggil dari Server Component** (kontrak Bagian 9). Mock
+  (`lib/api/mock/queries.ts`) juga mengimpor `server-only`, jadi `npm run build` sudah gagal
+  bila Client Component mengimpor `queries`, baik saat mock maupun asli. Halaman membaca data
+  di `page.tsx` (server) dan mengirimnya lewat props ke komponen form (`"use client"`).
+- Mock action juga Server Action (`lib/api/mock/server-actions.ts`), store mock di
+  `globalThis`, jadi query dan action mock melihat data yang sama.
+- `lib/api/conformance.ts` memeriksa mock DAN asli terhadap `Queries`/`Actions`.
 
 ## Env var
 

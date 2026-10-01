@@ -1,37 +1,33 @@
-"use client";
-
-import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { queries } from "@/src/lib/api/queries";
-import { NasabahRingkas, formatRupiah, ERROR_MESSAGES } from "@/src/contract";
-import { Search, UserCheck, Wallet, ArrowRight, Loader2, UserX, AlertCircle } from "lucide-react";
+import { redirect } from "next/navigation";
+import { queries } from "@/lib/api/queries";
+import { formatRupiah, redirectUntukError, type NasabahRingkas } from "@/contract";
+import { Search, UserCheck, Wallet, ArrowRight, UserX, AlertCircle } from "lucide-react";
+import { CariNasabahForm } from "./cari-nasabah-form";
 
-export default function AdminSearchPage() {
-  const [query, setQuery] = useState("");
-  const [nasabahList, setNasabahList] = useState<NasabahRingkas[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+/** Minimal 2 karakter (CariNasabahInputSchema); di bawah itu tidak memanggil query. */
+const MIN_QUERY = 2;
 
-  const handleSearch = useCallback(async (q: string) => {
-    setLoading(true);
-    setErrorMessage(null);
-    try {
-      const res = await queries.cariNasabah({ query: q || "a" }); // Default initial search
-      if (res.ok) {
-        setNasabahList(res.data);
-      } else {
-        setErrorMessage(ERROR_MESSAGES[res.code]);
-      }
-    } catch {
-      setErrorMessage(ERROR_MESSAGES.SERVER_ERROR);
-    } finally {
-      setLoading(false);
+export default async function AdminSearchPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const raw = (await searchParams).q;
+  const query = (typeof raw === "string" ? raw : "").trim();
+
+  let nasabahList: NasabahRingkas[] = [];
+  let errorMessage: string | null = null;
+  if (query.length >= MIN_QUERY) {
+    const res = await queries.cariNasabah({ query });
+    if (res.ok) {
+      nasabahList = res.data;
+    } else {
+      const redir = redirectUntukError(res.code);
+      if (redir) redirect(redir);
+      errorMessage = res.message;
     }
-  }, []);
-
-  useEffect(() => {
-    handleSearch("");
-  }, [handleSearch]);
+  }
 
   return (
     <div className="space-y-8">
@@ -49,42 +45,7 @@ export default function AdminSearchPage() {
             Cari nasabah berdasarkan ID Nasabah (Username) atau Nama untuk memproses Setor Sampah atau Penarikan Saldo Tunai.
           </p>
 
-          {/* Search Box Form */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSearch(query);
-            }}
-            className="flex flex-col sm:flex-row gap-3 pt-2"
-          >
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  handleSearch(e.target.value);
-                }}
-                placeholder="Ketik nama atau ID nasabah (contoh: nasabah01)..."
-                className="w-full bg-slate-950/80 border border-slate-700/80 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-slate-100 placeholder-slate-500 text-sm rounded-xl pl-10 pr-4 py-3 outline-none transition-all"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm rounded-xl px-5 py-3 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 shrink-0"
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  <span>Cari</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
+          <CariNasabahForm awal={query} />
         </div>
       </div>
 
@@ -107,10 +68,10 @@ export default function AdminSearchPage() {
           </h2>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-16 text-slate-500 gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-emerald-500" />
-            <span className="text-sm font-medium">Mencari data nasabah...</span>
+        {query.length < MIN_QUERY ? (
+          <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-12 text-center text-slate-400 space-y-3">
+            <Search className="w-10 h-10 text-slate-600 mx-auto" />
+            <p className="font-semibold text-sm">Ketik minimal {MIN_QUERY} karakter untuk mencari</p>
           </div>
         ) : nasabahList.length === 0 ? (
           <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-12 text-center text-slate-400 space-y-3">

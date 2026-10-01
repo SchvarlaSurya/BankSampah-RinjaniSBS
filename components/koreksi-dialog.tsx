@@ -2,8 +2,8 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { actions } from "@/src/lib/api/actions";
-import { ERROR_MESSAGES, LIMIT } from "@/src/contract";
+import { actions } from "@/lib/api/actions";
+import { ERROR_MESSAGES, LIMIT } from "@/contract";
 import { RotateCcw, AlertTriangle, Loader2 } from "lucide-react";
 
 export default function KoreksiDialog({ transaksiId }: { transaksiId: string }) {
