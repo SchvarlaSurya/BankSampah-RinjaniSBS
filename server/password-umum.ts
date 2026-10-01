@@ -1,3 +1,4 @@
+import "server-only";
 /**
  * Penolakan password yang mudah ditebak saat ganti password. Daftar sengaja kecil dan lokal
  * (tidak memanggil layanan luar): password paling umum secara global + pola lokal Indonesia.

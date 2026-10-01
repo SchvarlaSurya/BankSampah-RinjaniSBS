@@ -1,3 +1,4 @@
+import "server-only";
 import { randomInt } from "node:crypto";
 import type { Role } from "@/contract";
 import { eq } from "drizzle-orm";

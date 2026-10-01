@@ -205,7 +205,7 @@ describe("setStatusPengguna (super_admin)", () => {
 
 describe("scripts/reset-password-superadmin.ts", () => {
   function jalankan(username: string) {
-    return spawnSync(process.execPath, [`${akar}node_modules/tsx/dist/cli.mjs`, "scripts/reset-password-superadmin.ts"], {
+    return spawnSync(process.execPath, [`${akar}node_modules/tsx/dist/cli.mjs`, "--conditions=react-server", "scripts/reset-password-superadmin.ts"], {
       cwd: akar,
       encoding: "utf8",
       env: { ...process.env, RESET_SUPERADMIN_USERNAME: username },

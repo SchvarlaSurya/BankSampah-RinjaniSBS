@@ -1,3 +1,4 @@
+import "server-only";
 import { type ActionResult, fail } from "@/contract";
 import { logServer } from "../errors";
 import { type NamaAkses, requireAkses, type SesiServer } from "../guards";

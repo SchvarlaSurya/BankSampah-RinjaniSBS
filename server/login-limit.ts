@@ -1,3 +1,4 @@
+import "server-only";
 import { and, desc, eq, gt, lt, sql } from "drizzle-orm";
 import { db } from "./db";
 import { loginGagalIp, loginGagalUsername } from "./db/schema";

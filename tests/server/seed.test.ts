@@ -12,7 +12,7 @@ const { owner } = bukaKoneksi();
 const akar = fileURLToPath(new URL("../../", import.meta.url));
 
 function jalankanSeed(username: string, nama: string) {
-  return spawnSync(process.execPath, [`${akar}node_modules/tsx/dist/cli.mjs`, "scripts/seed-superadmin.ts"], {
+  return spawnSync(process.execPath, [`${akar}node_modules/tsx/dist/cli.mjs`, "--conditions=react-server", "scripts/seed-superadmin.ts"], {
     cwd: akar,
     encoding: "utf8",
     env: { ...process.env, SEED_SUPERADMIN_USERNAME: username, SEED_SUPERADMIN_NAMA: nama },

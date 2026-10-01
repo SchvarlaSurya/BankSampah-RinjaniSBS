@@ -3,8 +3,9 @@
 // File "use server": hanya fungsi async yang diekspor (dipanggil dari Client Component).
 // Objek `realActions` untuk saklar frontend ada di ./real-actions.ts.
 
+import "server-only";
 import { isAPIError } from "better-auth/api";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import {
   type ActionResult,
@@ -15,9 +16,13 @@ import {
   GantiPasswordInputSchema,
   type GantiPasswordInput,
   type JenisSampah,
+  type KoreksiInput,
+  KoreksiInputSchema,
   type LoginInput,
   LoginInputSchema,
+  type MutasiResult,
   ok,
+  parseSetorFormData,
   type PenggunaBaruResult,
   type PenggunaRingkas,
   ResetPasswordInputSchema,
@@ -26,17 +31,24 @@ import {
   type SesiInfo,
   SetStatusPenggunaInputSchema,
   type SetStatusPenggunaInput,
+  SetorInputSchema,
   SimpanJenisSampahInputSchema,
   type SimpanJenisSampahInput,
+  type TarikInput,
+  TarikInputSchema,
 } from "@/contract";
 import { idKeNumber } from "../angka";
 import { auth } from "../auth";
 import { db } from "../db";
 import { user } from "../db/auth-schema";
 import { wasteTypes } from "../db/schema";
-import { constraintUnik, logServer } from "../errors";
+import { constraintUnik, logServer, pgErrorDari, petaErrorDb } from "../errors";
+import { fotoStorage } from "../foto/storage";
+import { periksaFoto } from "../foto/validasi";
+import type { SesiServer } from "../guards";
 import { ipKlien } from "../ip";
 import { mulaiPercobaan, percobaanBerhasil, percobaanGagal } from "../login-limit";
+import { itemsKeJson, panggilLedger } from "../ledger";
 import { alasanPasswordLemah } from "../password-umum";
 import {
   buatPasswordSementara,
@@ -45,6 +57,7 @@ import {
   hapusSesiLain,
   resetKePasswordSementara,
 } from "../pengguna";
+import { muatTransaksiDetail } from "../transaksi";
 import { jalankan } from "./_jalankan";
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -258,5 +271,102 @@ export async function simpanJenisSampah(input: SimpanJenisSampahInput): Promise<
       }
       throw e;
     }
+  });
+}
+
+// ─── Ledger (setor, tarik, koreksi) ─────────────────────────────────────────
+
+/** MutasiResult memakai TransaksiDetail dari fungsi yang SAMA dengan getTransaksi. */
+async function hasilMutasi(
+  h: { transactionId: string; saldoBaru: number; duplikat: boolean },
+  sesi: SesiServer,
+): Promise<ActionResult<MutasiResult>> {
+  const [transaksi] = await muatTransaksiDetail([h.transactionId], sesi);
+  if (!transaksi) throw new Error(`transaksi ${h.transactionId} tidak terbaca setelah mutasi`);
+  return ok({ transaksi, saldoBaru: h.saldoBaru, duplikat: h.duplikat });
+}
+
+/** Error dari fungsi SQL: kode kontrak dikembalikan, selain itu dilempar (SERVER_ERROR + log). */
+function kodeLedger(nama: string, e: unknown) {
+  const kode = petaErrorDb(nama, e);
+  if (kode === "SERVER_ERROR") throw e;
+  return fail(kode);
+}
+
+/**
+ * Setor dengan foto timbangan (FormData: "payload" JSON + "foto"). Foto diunggah dulu dengan
+ * nama acak; bila SQL menolak atau permintaan ternyata duplikat (clientRequestId sama), file
+ * BARU itu dihapus lagi. File milik transaksi asli tidak pernah disentuh.
+ */
+export async function setor(formData: FormData): Promise<ActionResult<MutasiResult>> {
+  return jalankan("setor", async (sesi) => {
+    const { payload, foto } = parseSetorFormData(formData);
+    const parsed = SetorInputSchema.safeParse(payload);
+    if (!parsed.success) return failDariZod(parsed.error);
+    const input = parsed.data;
+
+    const f = await periksaFoto(foto);
+    if (!f.ok) return fail(f.kode);
+
+    const items = itemsKeJson(input.items);
+    if (items === null) return fail("JENIS_SAMPAH_TIDAK_VALID");
+
+    const storage = fotoStorage();
+    await storage.simpan(f.namaAcak, f.bytes, f.mime);
+    const hapusFotoBaru = () =>
+      storage.hapus(f.namaAcak).catch((e: unknown) => logServer("setor:hapus-foto", e));
+
+    let hasil;
+    try {
+      hasil = await panggilLedger(sql`
+        select * from public.setor(
+          ${input.customerId}, ${sesi.userId},
+          ${input.clientRequestId}::uuid, ${items}::text::jsonb,
+          ${f.namaAcak}, ${f.sha256}, ${input.catatan || null}
+        )`);
+    } catch (e) {
+      // Hanya bila DB menjawab dengan error (statement pasti di-rollback). Gangguan koneksi:
+      // hasil tidak pasti, file dibiarkan (yatim lebih aman daripada transaksi tanpa foto).
+      if (pgErrorDari(e)) await hapusFotoBaru();
+      return kodeLedger("setor", e);
+    }
+    if (hasil.duplikat) await hapusFotoBaru();
+    return hasilMutasi(hasil, sesi);
+  });
+}
+
+export async function tarik(input: TarikInput): Promise<ActionResult<MutasiResult>> {
+  return jalankan("tarik", async (sesi) => {
+    const parsed = TarikInputSchema.safeParse(input);
+    if (!parsed.success) return failDariZod(parsed.error);
+    const { customerId, jumlah, catatan, clientRequestId } = parsed.data;
+    let hasil;
+    try {
+      hasil = await panggilLedger(sql`
+        select * from public.tarik(
+          ${customerId}, ${sesi.userId}, ${clientRequestId}::uuid, ${jumlah}::integer, ${catatan || null}
+        )`);
+    } catch (e) {
+      return kodeLedger("tarik", e);
+    }
+    return hasilMutasi(hasil, sesi);
+  });
+}
+
+export async function koreksi(input: KoreksiInput): Promise<ActionResult<MutasiResult>> {
+  return jalankan("koreksi", async (sesi) => {
+    const parsed = KoreksiInputSchema.safeParse(input);
+    if (!parsed.success) return failDariZod(parsed.error);
+    const { transaksiId, alasan, clientRequestId } = parsed.data;
+    let hasil;
+    try {
+      hasil = await panggilLedger(sql`
+        select * from public.koreksi(
+          ${transaksiId}::bigint, ${sesi.userId}, ${clientRequestId}::uuid, ${alasan}
+        )`);
+    } catch (e) {
+      return kodeLedger("koreksi", e);
+    }
+    return hasilMutasi(hasil, sesi);
   });
 }

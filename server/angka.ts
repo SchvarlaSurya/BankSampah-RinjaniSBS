@@ -1,3 +1,4 @@
+import "server-only";
 /**
  * bigint dari Postgres (postgres.js mengembalikan int8 sebagai string) -> number untuk kontrak.
  * Hanya bila aman (Number.isSafeInteger); selain itu melempar, dan pemanggil memetakannya ke

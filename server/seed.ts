@@ -1,3 +1,4 @@
+import "server-only";
 import { eq, or } from "drizzle-orm";
 import { BuatPenggunaInputSchema } from "@/contract";
 import { db } from "./db";
