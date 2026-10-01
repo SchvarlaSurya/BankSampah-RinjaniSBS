@@ -194,3 +194,22 @@ describe("pembatas login per IP (30 gagal / 15 menit, x-vercel-forwarded-for)", 
     expect((await coba(daftar, a.username, a.password)).ok).toBe(true);
   });
 });
+
+describe("pembersihan baris limiter lama", () => {
+  it("percobaan gagal mana pun menghapus baris semua kunci yang sudah keluar dari jendela", async () => {
+    const lamaUser = usernameAcak("lama");
+    const lamaIp = ipBaru();
+    const segarUser = usernameAcak("segar");
+    await owner`insert into public.login_gagal_username (username, waktu) values
+      (${lamaUser}, now() - interval '1 day'), (${lamaUser}, now() - interval '16 minutes'),
+      (${segarUser}, now() - interval '5 minutes')`;
+    await owner`insert into public.login_gagal_ip (ip, waktu) values (${lamaIp}, now() - interval '2 hours')`;
+
+    expect(await coba(new Browser(ipBaru()), usernameAcak(), "salah-xxxx")).toEqual(KREDENSIAL_SALAH);
+
+    const [u] = await owner`select count(*)::int as n from public.login_gagal_username where username = ${lamaUser}`;
+    const [i] = await owner`select count(*)::int as n from public.login_gagal_ip where ip = ${lamaIp}`;
+    const [s] = await owner`select count(*)::int as n from public.login_gagal_username where username = ${segarUser}`;
+    expect([u.n, i.n, s.n]).toEqual([0, 0, 1]);
+  });
+});

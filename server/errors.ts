@@ -57,3 +57,9 @@ export function petaErrorDb(konteks: string, e: unknown): ErrorCode {
     console.info(`[${konteks}] ${kode}`, { detail: pg.detail });
   return kode;
 }
+
+/** Nama constraint bila `e` adalah unique_violation (23505), selain itu null. */
+export function constraintUnik(e: unknown): string | null {
+  const pg = pgErrorDari(e);
+  return pg?.code === "23505" ? (pg.constraint_name ?? "") : null;
+}

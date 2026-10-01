@@ -154,6 +154,7 @@ export const loginGagalUsername = pgTable(
       t.username,
       t.waktu.desc().nullsFirst(),
     ),
+    index("login_gagal_username_waktu_idx").on(t.waktu),
   ],
 );
 
@@ -168,5 +169,6 @@ export const loginGagalIp = pgTable(
   },
   (t) => [
     index("login_gagal_ip_ip_waktu_idx").on(t.ip, t.waktu.desc().nullsFirst()),
+    index("login_gagal_ip_waktu_idx").on(t.waktu),
   ],
 );
