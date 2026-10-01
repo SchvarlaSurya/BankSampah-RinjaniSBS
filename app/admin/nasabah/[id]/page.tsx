@@ -1,41 +1,57 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { queries } from "@/src/lib/api/queries";
-import { formatRupiah, ERROR_MESSAGES, redirectUntukError } from "@/src/contract";
-import { 
-  UserCheck, 
-  Wallet, 
-  ArrowLeft, 
-  ArrowDownLeft, 
-  ArrowUpRight, 
-  History, 
-  ChevronRight, 
+import { formatRupiah, ERROR_MESSAGES, redirectUntukError, LIMIT } from "@/src/contract";
+import {
+  UserCheck,
+  Wallet,
+  ArrowLeft,
+  ArrowDownLeft,
+  ArrowUpRight,
+  History,
+  ChevronRight,
   RotateCcw,
-  UserX
+  UserX,
+  ChevronLeft,
+  AlertCircle,
 } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminNasabahDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ cursor?: string; prev?: string }>;
 }) {
   const { id } = await params;
-  
+  const { cursor, prev } = await searchParams;
+
   const nasabahRes = await queries.getNasabah({ customerId: id });
   if (!nasabahRes.ok) {
     const redir = redirectUntukError(nasabahRes.code);
     if (redir) redirect(redir);
     if (nasabahRes.code === "NASABAH_TIDAK_DITEMUKAN") notFound();
     return (
-      <div className="p-6 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-300 text-sm">
+      <div className="p-6 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-300 text-sm flex items-center gap-3">
+        <AlertCircle className="w-4 h-4 shrink-0" />
         {nasabahRes.message || ERROR_MESSAGES[nasabahRes.code]}
       </div>
     );
   }
 
   const nasabah = nasabahRes.data;
-  const historiRes = await queries.getHistori({ customerId: id, limit: 20 });
+  const limit = LIMIT.HISTORI_DEFAULT;
+  const historiRes = await queries.getHistori({
+    customerId: id,
+    cursor: cursor || undefined,
+    limit,
+  });
+
   const historiItems = historiRes.ok ? historiRes.data.items : [];
+  const nextCursor = historiRes.ok ? historiRes.data.nextCursor : null;
+  const hasHistoriError = !historiRes.ok;
 
   return (
     <div className="space-y-6">
@@ -114,14 +130,27 @@ export default async function AdminNasabahDetailPage({
         <div className="flex items-center justify-between pb-2">
           <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
             <History className="w-4 h-4 text-emerald-400" />
-            <span>Riwayat Mutasi & Transaksi</span>
+            <span>Riwayat Mutasi &amp; Transaksi</span>
           </h2>
-          <span className="text-xs text-slate-500">20 Transaksi Terbaru</span>
+          {cursor && (
+            <span className="text-xs text-slate-500 font-mono">Halaman berikutnya</span>
+          )}
         </div>
 
-        {historiItems.length === 0 ? (
+        {hasHistoriError ? (
+          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-3">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>
+              {!historiRes.ok
+                ? historiRes.message || ERROR_MESSAGES[historiRes.code]
+                : "Gagal memuat riwayat transaksi."}
+            </span>
+          </div>
+        ) : historiItems.length === 0 ? (
           <div className="py-12 text-center text-slate-500 text-sm">
-            Belum ada riwayat transaksi untuk nasabah ini.
+            {cursor
+              ? "Tidak ada transaksi lagi pada halaman ini."
+              : "Belum ada riwayat transaksi untuk nasabah ini."}
           </div>
         ) : (
           <div className="divide-y divide-slate-800/60">
@@ -198,6 +227,54 @@ export default async function AdminNasabahDetailPage({
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {(cursor || nextCursor) && (
+          <div className="flex items-center justify-between pt-4 border-t border-slate-800/60">
+            <Link
+              href={
+                prev
+                  ? `/admin/nasabah/${id}?cursor=${prev}`
+                  : `/admin/nasabah/${id}`
+              }
+              className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg transition-colors ${
+                cursor
+                  ? "text-slate-300 hover:text-white hover:bg-slate-800"
+                  : "text-slate-600 pointer-events-none"
+              }`}
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Sebelumnya</span>
+            </Link>
+
+            <Link
+              href={
+                nextCursor
+                  ? `/admin/nasabah/${id}?cursor=${nextCursor}${cursor ? `&prev=${cursor}` : ""}`
+                  : "#"
+              }
+              className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg transition-colors ${
+                nextCursor
+                  ? "text-slate-300 hover:text-white hover:bg-slate-800"
+                  : "text-slate-600 pointer-events-none"
+              }`}
+            >
+              <span>Berikutnya</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        )}
+        {nextCursor && !cursor && (
+          <div className="flex justify-end pt-2">
+            <Link
+              href={`/admin/nasabah/${id}?cursor=${nextCursor}`}
+              className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+            >
+              <span>Muat lebih banyak</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
         )}
       </div>

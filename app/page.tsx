@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { queries } from "@/src/lib/api/queries";
 import { ROUTES } from "@/src/contract";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const sesi = await queries.getSesi();
 

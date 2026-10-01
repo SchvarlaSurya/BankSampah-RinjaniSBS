@@ -4,6 +4,8 @@ import { queries } from "@/src/lib/api/queries";
 import { formatRupiah, redirectUntukError } from "@/src/contract";
 import { ArrowLeft, ArrowDownLeft, ArrowUpRight, RotateCcw, Calendar, Scale } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function NasabahTransaksiDetailPage({
   params,
 }: {

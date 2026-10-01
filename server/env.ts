@@ -7,10 +7,13 @@ const postgresUrl = z
   .pipe(z.url({ protocol: /^postgres(ql)?$/ }));
 
 const schema = z.object({
-  DATABASE_URL: postgresUrl,
+  DATABASE_URL: postgresUrl.default("postgresql://postgres:postgres@localhost:5432/postgres"),
 });
 
-const parsed = schema.safeParse(process.env);
+const parsed = schema.safeParse({
+  ...process.env,
+  DATABASE_URL: process.env.DATABASE_URL || undefined,
+});
 
 if (!parsed.success) {
   throw new Error(
