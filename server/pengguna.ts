@@ -6,7 +6,7 @@ import { auth } from "./auth";
 const ALFABET_PASSWORD =
   "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 
-export function buatPasswordSementara(panjang = 10): string {
+export function buatPasswordSementara(panjang = 12): string {
   let hasil = "";
   for (let i = 0; i < panjang; i++)
     hasil += ALFABET_PASSWORD[randomInt(ALFABET_PASSWORD.length)];

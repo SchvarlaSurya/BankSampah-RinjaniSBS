@@ -98,11 +98,60 @@ export const allUsersById = new Map<UserId, NasabahRingkas | PenggunaRingkas>([
 // ── Jenis Sampah ──────────────────────────────────────────────────────────────
 
 export const mockJenisSampah: JenisSampah[] = [
-  { id: "js-1" as IdStr, nama: "Kertas / Kardus", hargaBeli: 1500 as Rupiah, aktif: true },
-  { id: "js-2" as IdStr, nama: "Plastik PET (Botol)", hargaBeli: 2500 as Rupiah, aktif: true },
-  { id: "js-3" as IdStr, nama: "Aluminium / Kaleng", hargaBeli: 8000 as Rupiah, aktif: true },
-  { id: "js-4" as IdStr, nama: "Besi / Logam", hargaBeli: 3000 as Rupiah, aktif: true },
-  { id: "js-5" as IdStr, nama: "Kaca / Botol Kaca", hargaBeli: 500 as Rupiah, aktif: false },
+  {
+    id: "js-1" as IdStr,
+    nama: "Kertas / Kardus",
+    hargaBeli: 1500 as Rupiah,
+    hargaJual: 2200 as Rupiah,
+    aktif: true,
+    terakhirDiubah: {
+      waktu: "2026-10-01T08:00:00.000Z",
+      hargaLama: 1200 as Rupiah,
+      hargaBaru: 1500 as Rupiah,
+      diubahOlehNama: "Super Admin Rinjani",
+    },
+  },
+  {
+    id: "js-2" as IdStr,
+    nama: "Plastik PET (Botol)",
+    hargaBeli: 2500 as Rupiah,
+    hargaJual: 3500 as Rupiah,
+    aktif: true,
+    terakhirDiubah: {
+      waktu: "2026-10-05T10:30:00.000Z",
+      hargaLama: 2000 as Rupiah,
+      hargaBaru: 2500 as Rupiah,
+      diubahOlehNama: "Admin Satu",
+    },
+  },
+  { id: "js-3" as IdStr, nama: "Aluminium / Kaleng", hargaBeli: 8000 as Rupiah, hargaJual: 11000 as Rupiah, aktif: true },
+  { id: "js-4" as IdStr, nama: "Besi / Logam", hargaBeli: 3000 as Rupiah, hargaJual: 4500 as Rupiah, aktif: true },
+  { id: "js-5" as IdStr, nama: "Kaca / Botol Kaca", hargaBeli: 500 as Rupiah, hargaJual: 800 as Rupiah, aktif: false },
+];
+
+export const mockRiwayatHarga: import("@/src/contract").RiwayatHargaItem[] = [
+  {
+    id: "ph-1",
+    sampahId: "js-2",
+    sampahNama: "Plastik PET (Botol)",
+    hargaLama: 2000,
+    hargaBaru: 2500,
+    diubahOlehId: "user-admin-1",
+    diubahOlehNama: "Admin Satu",
+    diubahOlehUsername: "admin01",
+    createdAt: "2026-10-05T10:30:00.000Z",
+  },
+  {
+    id: "ph-2",
+    sampahId: "js-1",
+    sampahNama: "Kertas / Kardus",
+    hargaLama: 1200,
+    hargaBaru: 1500,
+    diubahOlehId: "user-sa-1",
+    diubahOlehNama: "Super Admin Rinjani",
+    diubahOlehUsername: "superadmin",
+    createdAt: "2026-10-01T08:00:00.000Z",
+  },
 ];
 
 // ── Transaksi ─────────────────────────────────────────────────────────────────

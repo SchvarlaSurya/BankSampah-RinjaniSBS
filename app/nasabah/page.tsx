@@ -13,6 +13,7 @@ import {
   User,
   AlertCircle,
 } from "lucide-react";
+import { GantiPasswordModal } from "./GantiPasswordModal";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,9 @@ export default async function NasabahDashboardPage({
               </p>
             </div>
           </div>
+          <div className="shrink-0 mt-4 sm:mt-0">
+            <GantiPasswordModal />
+          </div>
         </div>
 
         <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -81,6 +85,13 @@ export default async function NasabahDashboardPage({
               {formatRupiah(profil.saldo)}
             </span>
           </div>
+          <Link
+            href="/nasabah/katalog"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/60 text-emerald-400 text-xs font-bold transition-all hover:border-emerald-500/50 shadow-md"
+          >
+            <span>Lihat Katalog Harga Sampah</span>
+            <ChevronRight className="w-4 h-4" />
+          </Link>
         </div>
       </div>
 

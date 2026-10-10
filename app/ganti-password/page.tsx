@@ -5,13 +5,17 @@ import { useRouter } from "next/navigation";
 import { actions } from "@/src/lib/api/actions";
 import { queries } from "@/src/lib/api/queries";
 import { ROUTES, ERROR_MESSAGES, LIMIT } from "@/src/contract";
-import { KeyRound, Lock, AlertCircle, CheckCircle2, Loader2, ArrowRight } from "lucide-react";
+import { KeyRound, Lock, AlertCircle, CheckCircle2, Loader2, ArrowRight, Eye, EyeOff } from "lucide-react";
 
 export default function GantiPasswordPage() {
   const router = useRouter();
   const [passwordLama, setPasswordLama] = useState("");
   const [passwordBaru, setPasswordBaru] = useState("");
   const [konfirmasi, setKonfirmasi] = useState("");
+  const [showOld, setShowOld] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -34,8 +38,11 @@ export default function GantiPasswordPage() {
       if (!res.ok) {
         if (res.fieldErrors) {
           setFieldErrors(res.fieldErrors);
+          const firstMsg = Object.values(res.fieldErrors).flat()[0];
+          setErrorMessage(firstMsg || res.message || ERROR_MESSAGES[res.code]);
+        } else {
+          setErrorMessage(res.message || ERROR_MESSAGES[res.code]);
         }
-        setErrorMessage(res.message || ERROR_MESSAGES[res.code]);
       } else {
         const sesi = await queries.getSesi();
         if (sesi) {
@@ -52,7 +59,7 @@ export default function GantiPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 selection:bg-emerald-500 selection:text-white relative overflow-hidden">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 py-8 selection:bg-emerald-500 selection:text-white relative overflow-x-hidden overflow-y-auto">
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-500/10 blur-[120px] rounded-full pointer-events-none" />
 
       <div className="w-full max-w-md relative z-10">
@@ -85,14 +92,27 @@ export default function GantiPasswordPage() {
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
-                  type="password"
+                  type={showOld ? "text" : "password"}
                   required
                   disabled={loading}
                   value={passwordLama}
-                  onChange={(e) => setPasswordLama(e.target.value)}
+                  onChange={(e) => {
+                    setPasswordLama(e.target.value);
+                    if (errorMessage || fieldErrors.passwordLama) {
+                      setErrorMessage(null);
+                      setFieldErrors((prev) => { const n = { ...prev }; delete n.passwordLama; return n; });
+                    }
+                  }}
                   placeholder="Masukkan password saat ini"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-100 placeholder-slate-600 text-sm rounded-xl pl-10 pr-4 py-2.5 transition-all outline-none"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-100 placeholder-slate-600 text-sm rounded-xl pl-10 pr-10 py-2.5 transition-all outline-none"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowOld(!showOld)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200"
+                >
+                  {showOld ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
               {fieldErrors.passwordLama && (
                 <p className="text-rose-400 text-xs mt-1">{fieldErrors.passwordLama.join(", ")}</p>
@@ -109,14 +129,27 @@ export default function GantiPasswordPage() {
                   <KeyRound className="w-4 h-4" />
                 </div>
                 <input
-                  type="password"
+                  type={showNew ? "text" : "password"}
                   required
                   disabled={loading}
                   value={passwordBaru}
-                  onChange={(e) => setPasswordBaru(e.target.value)}
+                  onChange={(e) => {
+                    setPasswordBaru(e.target.value);
+                    if (errorMessage || fieldErrors.passwordBaru) {
+                      setErrorMessage(null);
+                      setFieldErrors((prev) => { const n = { ...prev }; delete n.passwordBaru; return n; });
+                    }
+                  }}
                   placeholder="Minimal 8 karakter"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-100 placeholder-slate-600 text-sm rounded-xl pl-10 pr-4 py-2.5 transition-all outline-none"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-100 placeholder-slate-600 text-sm rounded-xl pl-10 pr-10 py-2.5 transition-all outline-none"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowNew(!showNew)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200"
+                >
+                  {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
               {fieldErrors.passwordBaru && (
                 <p className="text-rose-400 text-xs mt-1">{fieldErrors.passwordBaru.join(", ")}</p>
@@ -133,14 +166,27 @@ export default function GantiPasswordPage() {
                   <CheckCircle2 className="w-4 h-4" />
                 </div>
                 <input
-                  type="password"
+                  type={showConfirm ? "text" : "password"}
                   required
                   disabled={loading}
                   value={konfirmasi}
-                  onChange={(e) => setKonfirmasi(e.target.value)}
+                  onChange={(e) => {
+                    setKonfirmasi(e.target.value);
+                    if (errorMessage || fieldErrors.konfirmasi) {
+                      setErrorMessage(null);
+                      setFieldErrors((prev) => { const n = { ...prev }; delete n.konfirmasi; return n; });
+                    }
+                  }}
                   placeholder="Ketik ulang password baru"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-100 placeholder-slate-600 text-sm rounded-xl pl-10 pr-4 py-2.5 transition-all outline-none"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-100 placeholder-slate-600 text-sm rounded-xl pl-10 pr-10 py-2.5 transition-all outline-none"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(!showConfirm)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200"
+                >
+                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
               {fieldErrors.konfirmasi && (
                 <p className="text-rose-400 text-xs mt-1">{fieldErrors.konfirmasi.join(", ")}</p>

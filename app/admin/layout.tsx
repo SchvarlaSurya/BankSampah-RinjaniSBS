@@ -14,6 +14,8 @@ import {
   UserCheck 
 } from "lucide-react";
 
+import { GantiPasswordModal } from "@/app/nasabah/GantiPasswordModal";
+
 export default async function AdminLayout({
   children,
 }: {
@@ -59,28 +61,35 @@ export default async function AdminLayout({
                 <Search className="w-4 h-4 text-emerald-400" />
                 Cari Nasabah
               </Link>
+              <Link
+                href="/admin/jenis-sampah"
+                className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4 text-emerald-400" />
+                Jenis Sampah
+              </Link>
+              <Link
+                href="/admin/pengguna"
+                className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5"
+              >
+                <Users className="w-4 h-4 text-emerald-400" />
+                Pengguna / Nasabah
+              </Link>
               {isSuperAdmin && (
                 <>
-                  <Link
-                    href="/admin/jenis-sampah"
-                    className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5"
-                  >
-                    <Trash2 className="w-4 h-4 text-emerald-400" />
-                    Jenis Sampah
-                  </Link>
-                  <Link
-                    href="/admin/pengguna"
-                    className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5"
-                  >
-                    <Users className="w-4 h-4 text-emerald-400" />
-                    Kelola Pengguna
-                  </Link>
                   <Link
                     href="/admin/audit"
                     className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5"
                   >
                     <FileCheck className="w-4 h-4 text-emerald-400" />
                     Audit Transaksi
+                  </Link>
+                  <Link
+                    href="/admin/audit-harga"
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5"
+                  >
+                    <FileCheck className="w-4 h-4 text-amber-400" />
+                    Audit Harga
                   </Link>
                 </>
               )}
@@ -100,6 +109,9 @@ export default async function AdminLayout({
                 {sesi.role}
               </span>
             </div>
+
+            {/* Ganti Password Modal */}
+            <GantiPasswordModal />
 
             {/* Logout button */}
             <form
@@ -130,28 +142,35 @@ export default async function AdminLayout({
             <Search className="w-4 h-4" />
             <span>Cari</span>
           </Link>
+          <Link
+            href="/admin/jenis-sampah"
+            className="flex flex-col items-center gap-1 text-slate-300 hover:text-emerald-400 p-1"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Sampah</span>
+          </Link>
+          <Link
+            href="/admin/pengguna"
+            className="flex flex-col items-center gap-1 text-slate-300 hover:text-emerald-400 p-1"
+          >
+            <Users className="w-4 h-4" />
+            <span>Nasabah</span>
+          </Link>
           {isSuperAdmin && (
             <>
-              <Link
-                href="/admin/jenis-sampah"
-                className="flex flex-col items-center gap-1 text-slate-300 hover:text-emerald-400 p-1"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Sampah</span>
-              </Link>
-              <Link
-                href="/admin/pengguna"
-                className="flex flex-col items-center gap-1 text-slate-300 hover:text-emerald-400 p-1"
-              >
-                <Users className="w-4 h-4" />
-                <span>Pengguna</span>
-              </Link>
               <Link
                 href="/admin/audit"
                 className="flex flex-col items-center gap-1 text-slate-300 hover:text-emerald-400 p-1"
               >
                 <FileCheck className="w-4 h-4" />
-                <span>Audit</span>
+                <span>Audit Tx</span>
+              </Link>
+              <Link
+                href="/admin/audit-harga"
+                className="flex flex-col items-center gap-1 text-slate-300 hover:text-amber-400 p-1"
+              >
+                <FileCheck className="w-4 h-4 text-amber-400" />
+                <span>Log Harga</span>
               </Link>
             </>
           )}

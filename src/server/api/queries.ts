@@ -1,17 +1,22 @@
 "use server";
 
-import { eq, and, sql, desc, lt, gte, lte, ilike, or, inArray } from "drizzle-orm";
+import { eq, and, sql, desc, lt, gte, lte, ilike, or, inArray, type SQL } from "drizzle-orm";
 import { db } from "@/server/db";
 import {
   user as userTable,
   transactions as transactionsTable,
   transactionItems as transactionItemsTable,
   wasteTypes as wasteTypesTable,
+  priceHistory as priceHistoryTable,
 } from "@/server/db/schema";
 import type {
   NasabahRingkas,
   PenggunaRingkas,
+  PenggunaDetail,
+  HalamanPengguna,
   JenisSampah,
+  RiwayatHargaItem,
+  RiwayatHargaInput,
   TransaksiRingkas,
   TransaksiDetail,
   ItemTransaksi,
@@ -23,10 +28,11 @@ import type {
   HistoriInput,
   GetTransaksiInput,
   AuditInput,
+  ListPenggunaInput,
   ActionResult,
   SesiInfo,
 } from "@/src/contract";
-import { ok, fail, normalisasiBerat } from "@/src/contract";
+import { ok, fail, normalisasiBerat, ListPenggunaInputSchema } from "@/src/contract";
 import { getSesi as fetchSesi } from "./_session";
 
 async function hitungSaldo(customerId: string): Promise<number> {
@@ -132,10 +138,10 @@ export async function getNasabah({ customerId }: GetNasabahInput): Promise<Actio
 
 export async function listJenisSampah(input?: { termasukNonaktif?: boolean }): Promise<ActionResult<JenisSampah[]>> {
   const sesi = await fetchSesi();
-  if (!sesi) return fail("TIDAK_LOGIN");
-  if (sesi.mustChangePassword) return fail("WAJIB_GANTI_PASSWORD");
+  if (sesi && sesi.mustChangePassword) return fail("WAJIB_GANTI_PASSWORD");
 
-  const termasukNonaktif = input?.termasukNonaktif ?? false;
+  const isAdmin = sesi?.role === "admin" || sesi?.role === "super_admin";
+  const termasukNonaktif = isAdmin ? (input?.termasukNonaktif ?? false) : false;
   const whereClause = termasukNonaktif
     ? undefined
     : eq(wasteTypesTable.aktif, true);
@@ -146,11 +152,93 @@ export async function listJenisSampah(input?: { termasukNonaktif?: boolean }): P
     .where(whereClause)
     .orderBy(wasteTypesTable.id);
 
-  const hasil: JenisSampah[] = rows.map((r) => ({
+  // Ambil log perubahan terakhir per jenis sampah
+  const latestLogs = await db
+    .select({
+      sampahId: priceHistoryTable.sampahId,
+      hargaLama: priceHistoryTable.hargaLama,
+      hargaBaru: priceHistoryTable.hargaBaru,
+      createdAt: priceHistoryTable.createdAt,
+      diubahOlehNama: userTable.name,
+    })
+    .from(priceHistoryTable)
+    .leftJoin(userTable, eq(priceHistoryTable.diubahOleh, userTable.id))
+    .orderBy(desc(priceHistoryTable.createdAt));
+
+  const latestMap = new Map<
+    number,
+    { waktu: string; hargaLama: number; hargaBaru: number; diubahOlehNama: string }
+  >();
+  for (const log of latestLogs) {
+    if (!latestMap.has(log.sampahId)) {
+      latestMap.set(log.sampahId, {
+        waktu: log.createdAt.toISOString(),
+        hargaLama: log.hargaLama,
+        hargaBaru: log.hargaBaru,
+        diubahOlehNama: log.diubahOlehNama ?? "Petugas",
+      });
+    }
+  }
+
+  const hasil: JenisSampah[] = rows.map((r) => {
+    const item: JenisSampah = {
+      id: String(r.id),
+      nama: r.nama,
+      hargaBeli: r.hargaBeli,
+      aktif: r.aktif,
+      terakhirDiubah: latestMap.get(r.id) ?? null,
+    };
+
+    if (isAdmin) {
+      // Sediakan harga_jual untuk admin (jika null, default 15-20% di atas harga beli)
+      item.hargaJual = r.hargaJual ?? Math.round(r.hargaBeli * 1.2);
+    }
+
+    return item;
+  });
+
+  return ok(hasil);
+}
+
+export async function listRiwayatHarga(input?: RiwayatHargaInput): Promise<ActionResult<RiwayatHargaItem[]>> {
+  const sesi = await fetchSesi();
+  if (!sesi) return fail("TIDAK_LOGIN");
+  if (sesi.mustChangePassword) return fail("WAJIB_GANTI_PASSWORD");
+  if (sesi.role !== "super_admin") return fail("TIDAK_DIIZINKAN");
+
+  const sampahIdNum = input?.sampahId ? Number(input.sampahId) : undefined;
+  const whereClause = sampahIdNum
+    ? eq(priceHistoryTable.sampahId, sampahIdNum)
+    : undefined;
+
+  const rows = await db
+    .select({
+      id: priceHistoryTable.id,
+      sampahId: priceHistoryTable.sampahId,
+      sampahNama: wasteTypesTable.nama,
+      hargaLama: priceHistoryTable.hargaLama,
+      hargaBaru: priceHistoryTable.hargaBaru,
+      diubahOlehId: priceHistoryTable.diubahOleh,
+      diubahOlehNama: userTable.name,
+      diubahOlehUsername: userTable.username,
+      createdAt: priceHistoryTable.createdAt,
+    })
+    .from(priceHistoryTable)
+    .innerJoin(wasteTypesTable, eq(priceHistoryTable.sampahId, wasteTypesTable.id))
+    .leftJoin(userTable, eq(priceHistoryTable.diubahOleh, userTable.id))
+    .where(whereClause)
+    .orderBy(desc(priceHistoryTable.createdAt));
+
+  const hasil: RiwayatHargaItem[] = rows.map((r) => ({
     id: String(r.id),
-    nama: r.nama,
-    hargaBeli: r.hargaBeli,
-    aktif: r.aktif,
+    sampahId: String(r.sampahId),
+    sampahNama: r.sampahNama,
+    hargaLama: r.hargaLama,
+    hargaBaru: r.hargaBaru,
+    diubahOlehId: r.diubahOlehId,
+    diubahOlehNama: r.diubahOlehNama ?? "Petugas",
+    diubahOlehUsername: r.diubahOlehUsername ?? "-",
+    createdAt: r.createdAt.toISOString(),
   }));
 
   return ok(hasil);
@@ -177,6 +265,94 @@ export async function listStaf(): Promise<ActionResult<PenggunaRingkas[]>> {
   }));
 
   return ok(staf);
+}
+
+export async function listPengguna(input?: ListPenggunaInput): Promise<ActionResult<HalamanPengguna>> {
+  const sesi = await fetchSesi();
+  if (!sesi) return fail("TIDAK_LOGIN");
+  if (sesi.mustChangePassword) return fail("WAJIB_GANTI_PASSWORD");
+  if (sesi.role !== "super_admin" && sesi.role !== "admin") return fail("TIDAK_DIIZINKAN");
+
+  const parsed = ListPenggunaInputSchema.safeParse(input ?? {});
+  if (!parsed.success) return fail("VALIDASI_GAGAL");
+
+  const { search, rt, aktif, limit, offset } = parsed.data;
+
+  // Admin basic dipaksa hanya melihat nasabah, request role lain diabaikan
+  let roleFilter = parsed.data.role;
+  if (sesi.role === "admin") {
+    roleFilter = "nasabah";
+  }
+
+  const conditions: SQL[] = [];
+
+  // Filter role
+  if (roleFilter) {
+    conditions.push(eq(userTable.role, roleFilter));
+  } else if (sesi.role === "admin") {
+    // admin basic: paksa nasabah
+    conditions.push(eq(userTable.role, "nasabah"));
+  }
+
+  // Filter aktif
+  if (aktif !== undefined) {
+    conditions.push(eq(userTable.aktif, aktif));
+  }
+
+  // Filter RT: prefix username 2 digit
+  if (rt && rt.trim()) {
+    const rtClean = rt.trim().padStart(2, "0");
+    conditions.push(ilike(userTable.username, `${rtClean}%`));
+  }
+
+  // Search: username atau nama
+  if (search && search.trim().length > 0) {
+    const q = search.trim();
+    conditions.push(
+      or(
+        ilike(userTable.username, `%${q}%`),
+        ilike(userTable.name, `%${q}%`)
+      )!
+    );
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  // Count total untuk pagination
+  const [countRow] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(userTable)
+    .where(whereClause);
+  const total = countRow?.count ?? 0;
+
+  // Fetch halaman
+  const rows = await db
+    .select()
+    .from(userTable)
+    .where(whereClause)
+    .orderBy(userTable.role, userTable.username)
+    .limit(limit)
+    .offset(offset);
+
+  const items: PenggunaDetail[] = rows.map((u) => {
+    // Ekstrak prefix RT dari username nasabah (2 digit pertama jika role nasabah)
+    let rtVal: string | null = null;
+    if (u.role === "nasabah" && u.username && /^\d{2}/.test(u.username)) {
+      rtVal = u.username.slice(0, 2);
+    }
+    return {
+      id: u.id as UserId,
+      username: u.username || u.email,
+      nama: u.name,
+      role: u.role as any,
+      aktif: u.aktif,
+      rt: rtVal,
+      mustChangePassword: u.mustChangePassword,
+      createdAt: u.createdAt.toISOString(),
+    };
+  });
+
+  return ok({ items, total, limit, offset });
 }
 
 export async function getHistori({ customerId, cursor, limit = 20 }: HistoriInput): Promise<ActionResult<Halaman<TransaksiRingkas>>> {

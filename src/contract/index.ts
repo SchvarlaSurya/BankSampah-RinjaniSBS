@@ -59,9 +59,9 @@ export const LIMIT = {
   ALASAN_MAKS: 300,
   HISTORI_DEFAULT: 20,
   HISTORI_MAKS: 50,
-  /** Foto: klien mengompres ke <= FOTO_TARGET_KB; server menolak > FOTO_MAKS_BYTES. */
+  /** Foto: klien mengompres ke <= FOTO_TARGET_KB; server menolak > FOTO_MAKS_BYTES (5 MB). */
   FOTO_TARGET_KB: 500,
-  FOTO_MAKS_BYTES: 1_500_000,
+  FOTO_MAKS_BYTES: 5_242_880,
 } as const;
 
 export const FOTO_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -257,11 +257,10 @@ const userId = z.string().min(1, "Wajib diisi").max(64);
 const catatan = z.string().trim().max(LIMIT.CATATAN_MAKS, "Terlalu panjang").optional();
 const uuid = z.uuid("clientRequestId harus UUID");
 
-const beratInput = z
-  .string()
-  .regex(/^\d{1,5}(\.\d{1,2})?$/, "Format berat: angka, maksimal 2 desimal (contoh 12.5)")
-  .refine((v) => beratKeCenti(v) > 0, "Berat harus lebih dari 0")
-  .refine((v) => beratKeCenti(v) <= LIMIT.MAKS_BERAT_KG * 100, `Berat maksimal ${LIMIT.MAKS_BERAT_KG} kg`);
+const beratInput = z.preprocess(
+  (v) => parseFloat(String(v).replace(',', '.').replace(/\.$/, '')) || 0,
+  z.number().min(0.01, "Berat harus lebih dari 0").max(LIMIT.MAKS_BERAT_KG, `Berat maksimal ${LIMIT.MAKS_BERAT_KG} kg`)
+);
 
 const passwordBaru = z
   .string()
@@ -276,17 +275,17 @@ export const LoginInputSchema = z.object({
 
 export const GantiPasswordInputSchema = z
   .object({
-    passwordLama: z.string().min(1, "Wajib diisi").max(LIMIT.PASSWORD_MAKS),
+    passwordLama: z.string().min(1, "Password saat ini wajib diisi").max(LIMIT.PASSWORD_MAKS),
     passwordBaru,
-    konfirmasi: z.string(),
+    konfirmasi: z.string().min(1, "Konfirmasi password wajib diisi"),
   })
   .refine((v) => v.passwordBaru === v.konfirmasi, {
     path: ["konfirmasi"],
-    message: "Konfirmasi tidak sama",
+    message: "Konfirmasi password baru tidak sama",
   })
   .refine((v) => v.passwordBaru !== v.passwordLama, {
     path: ["passwordBaru"],
-    message: "Password baru tidak boleh sama dengan yang lama",
+    message: "Password baru tidak boleh sama dengan password saat ini",
   });
 
 // --- Pengguna (Super Admin) ---
@@ -303,7 +302,30 @@ export const BuatPenggunaInputSchema = z.object({
 export const ResetPasswordInputSchema = z.object({ userId });
 export const SetStatusPenggunaInputSchema = z.object({ userId, aktif: z.boolean() });
 
+export const ListPenggunaInputSchema = z.object({
+  search: z.string().trim().max(64).optional(),
+  /** Filter role. Admin basic diabaikan — server paksa ke "nasabah". */
+  role: z.enum(["super_admin", "admin", "nasabah"]).optional(),
+  /** Prefix RT 2-digit, misal "01". Hanya relevan untuk role nasabah. */
+  rt: z.string().trim().max(4).optional(),
+  aktif: z.boolean().optional(),
+  limit: z.number().int().min(1).max(100).default(20),
+  offset: z.number().int().min(0).default(0),
+});
+export type ListPenggunaInput = z.input<typeof ListPenggunaInputSchema>;
+
 // --- Nasabah & jenis sampah ---
+export const GetLatestIdByRtInputSchema = z.object({
+  rtNumber: z.string().trim().min(1, "RT wajib diisi").max(10),
+});
+export type GetLatestIdByRtInput = z.infer<typeof GetLatestIdByRtInputSchema>;
+
+export interface LatestIdByRtResult {
+  nextId: string;
+  rt: string;
+  count: number;
+}
+
 export const CariNasabahInputSchema = z.object({
   query: z.string().trim().min(2, "Minimal 2 karakter").max(64),
 });
@@ -313,7 +335,12 @@ export const SimpanJenisSampahInputSchema = z.object({
   id: idStr.optional(), // kosong = buat baru
   nama: z.string().trim().min(2, "Terlalu pendek").max(60),
   hargaBeli: z.number().int().min(1).max(LIMIT.MAKS_HARGA_BELI_PER_KG),
+  hargaJual: z.number().int().min(1).max(LIMIT.MAKS_HARGA_BELI_PER_KG).optional().nullable(),
   aktif: z.boolean(),
+});
+
+export const RiwayatHargaInputSchema = z.object({
+  sampahId: idStr.optional(),
 });
 
 // --- Transaksi ---
@@ -375,6 +402,7 @@ export type SetStatusPenggunaInput = z.input<typeof SetStatusPenggunaInputSchema
 export type CariNasabahInput = z.input<typeof CariNasabahInputSchema>;
 export type GetNasabahInput = z.input<typeof GetNasabahInputSchema>;
 export type SimpanJenisSampahInput = z.input<typeof SimpanJenisSampahInputSchema>;
+export type RiwayatHargaInput = z.input<typeof RiwayatHargaInputSchema>;
 export type SetorInput = z.input<typeof SetorInputSchema>;
 export type TarikInput = z.input<typeof TarikInputSchema>;
 export type KoreksiInput = z.input<typeof KoreksiInputSchema>;
@@ -391,10 +419,10 @@ export type GetTransaksiInput = z.input<typeof GetTransaksiInputSchema>;
  *   "foto"   : File (sudah dikompres klien)
  * Frontend WAJIB memakai buildSetorFormData; backend WAJIB memakai parseSetorFormData.
  */
-export function buildSetorFormData(input: SetorInput, foto: File): FormData {
+export function buildSetorFormData(input: SetorInput, foto: File | null): FormData {
   const fd = new FormData();
   fd.append("payload", JSON.stringify(input));
-  fd.append("foto", foto);
+  if (foto) fd.append("foto", foto);
   return fd;
 }
 
@@ -431,6 +459,21 @@ export interface PenggunaRingkas {
   aktif: boolean;
 }
 
+/** DTO pengguna lengkap untuk halaman kelola pengguna (search + filter + pagination). */
+export interface PenggunaDetail extends PenggunaRingkas {
+  /** Prefix 2-digit RT dari username nasabah. null untuk staf. */
+  rt: string | null;
+  mustChangePassword: boolean;
+  createdAt: IsoUtc;
+}
+
+export interface HalamanPengguna {
+  items: PenggunaDetail[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface NasabahRingkas {
   id: UserId;
   username: string; // "ID Nasabah"
@@ -439,11 +482,32 @@ export interface NasabahRingkas {
   saldo: Rupiah; // dihitung server = SUM(jumlah)
 }
 
+export interface RiwayatHargaTerakhir {
+  waktu: IsoUtc;
+  hargaLama: Rupiah;
+  hargaBaru: Rupiah;
+  diubahOlehNama: string;
+}
+
 export interface JenisSampah {
   id: IdStr;
   nama: string;
   hargaBeli: Rupiah; // per kg
+  hargaJual?: Rupiah | null; // per kg (hanya ditampilkan untuk admin/super_admin)
   aktif: boolean;
+  terakhirDiubah?: RiwayatHargaTerakhir | null;
+}
+
+export interface RiwayatHargaItem {
+  id: string;
+  sampahId: IdStr;
+  sampahNama: string;
+  hargaLama: Rupiah;
+  hargaBaru: Rupiah;
+  diubahOlehId: UserId;
+  diubahOlehNama: string;
+  diubahOlehUsername: string;
+  createdAt: IsoUtc;
 }
 
 export interface ItemTransaksi {
@@ -526,10 +590,17 @@ export interface Queries {
   cariNasabah(input: CariNasabahInput): Promise<ActionResult<NasabahRingkas[]>>;
   /** admin, super_admin. */
   getNasabah(input: GetNasabahInput): Promise<ActionResult<NasabahRingkas>>;
-  /** admin, super_admin (untuk form setor: hanya aktif). super_admin boleh termasukNonaktif. */
+  /** admin, super_admin (untuk form setor: hanya aktif). super_admin & admin boleh termasukNonaktif. */
   listJenisSampah(input?: { termasukNonaktif?: boolean }): Promise<ActionResult<JenisSampah[]>>;
+  /** super_admin. Riwayat perubahan harga untuk seluruh atau jenis sampah tertentu. */
+  listRiwayatHarga(input?: RiwayatHargaInput): Promise<ActionResult<RiwayatHargaItem[]>>;
   /** super_admin. Daftar admin & super_admin (untuk filter audit & kelola pengguna). */
   listStaf(): Promise<ActionResult<PenggunaRingkas[]>>;
+  /**
+   * admin, super_admin. Daftar semua pengguna dengan search/filter/pagination.
+   * Admin basic hanya dapat melihat role nasabah, disaring ketat di server.
+   */
+  listPengguna(input?: ListPenggunaInput): Promise<ActionResult<HalamanPengguna>>;
   /** nasabah: hanya miliknya (customerId diabaikan/harus sama). admin & super_admin: siapa saja. */
   getHistori(input: HistoriInput): Promise<ActionResult<Halaman<TransaksiRingkas>>>;
   /** nasabah: hanya miliknya. fotoUrl hanya untuk super_admin. */
@@ -545,12 +616,16 @@ export interface Actions {
 
   /** super_admin. */
   buatPengguna(input: BuatPenggunaInput): Promise<ActionResult<PenggunaBaruResult>>;
+  /** admin, super_admin. Auto-generate ID nasabah berbasis RT. */
+  getLatestIdByRt(input: GetLatestIdByRtInput): Promise<ActionResult<LatestIdByRtResult>>;
   /** super_admin. Menyetel mustChangePassword = true. */
   resetPasswordPengguna(input: ResetPasswordInput): Promise<ActionResult<ResetPasswordResult>>;
   /** super_admin. Tidak bisa menonaktifkan diri sendiri. */
   setStatusPengguna(input: SetStatusPenggunaInput): Promise<ActionResult<PenggunaRingkas>>;
-  /** super_admin. Buat (tanpa id) atau ubah (dengan id). Perubahan harga hanya berlaku untuk transaksi berikutnya. */
+  /** admin, super_admin. Buat (tanpa id) atau ubah (dengan id). Perubahan harga hanya berlaku untuk transaksi berikutnya dan mencatat riwayat log. */
   simpanJenisSampah(input: SimpanJenisSampahInput): Promise<ActionResult<JenisSampah>>;
+  /** admin, super_admin. Update harga sampah dan mencatat audit log price_history. */
+  updateHargaSampah(input: SimpanJenisSampahInput): Promise<ActionResult<JenisSampah>>;
 
   /** admin, super_admin. Argumen = FormData, lihat buildSetorFormData. */
   setor(formData: FormData): Promise<ActionResult<MutasiResult>>;
@@ -569,18 +644,22 @@ export const AKSES: Record<keyof Queries | keyof Actions, readonly Role[]> = {
   getProfilSaya: ["nasabah"],
   cariNasabah: ["admin", "super_admin"],
   getNasabah: ["admin", "super_admin"],
-  listJenisSampah: ["admin", "super_admin"],
+  listJenisSampah: ROLES,
+  listRiwayatHarga: ["super_admin"],
   listStaf: ["super_admin"],
+  listPengguna: ["admin", "super_admin"],
   getHistori: ROLES,
   getTransaksi: ROLES,
   auditTransaksi: ["super_admin"],
   login: ROLES,
   logout: ROLES,
   gantiPassword: ROLES,
-  buatPengguna: ["super_admin"],
+  buatPengguna: ["admin", "super_admin"],
+  getLatestIdByRt: ["admin", "super_admin"],
   resetPasswordPengguna: ["super_admin"],
   setStatusPengguna: ["super_admin"],
-  simpanJenisSampah: ["super_admin"],
+  simpanJenisSampah: ["admin", "super_admin"],
+  updateHargaSampah: ["admin", "super_admin"],
   setor: ["admin", "super_admin"],
   tarik: ["admin", "super_admin"],
   koreksi: ["super_admin"],
@@ -591,3 +670,4 @@ export const AKSES: Record<keyof Queries | keyof Actions, readonly Role[]> = {
  * Semua aksi lain harus mengembalikan WAJIB_GANTI_PASSWORD.
  */
 export const BOLEH_SAAT_WAJIB_GANTI_PASSWORD = ["getSesi", "login", "logout", "gantiPassword"] as const;
+

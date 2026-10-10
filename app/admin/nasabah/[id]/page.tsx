@@ -14,7 +14,9 @@ import {
   UserX,
   ChevronLeft,
   AlertCircle,
+  KeyRound,
 } from "lucide-react";
+import ResetPasswordDialog from "@/components/ResetPasswordDialog";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +30,11 @@ export default async function AdminNasabahDetailPage({
   const { id } = await params;
   const { cursor, prev } = await searchParams;
 
-  const nasabahRes = await queries.getNasabah({ customerId: id });
+  const [sesi, nasabahRes] = await Promise.all([
+    queries.getSesi(),
+    queries.getNasabah({ customerId: id }),
+  ]);
+
   if (!nasabahRes.ok) {
     const redir = redirectUntukError(nasabahRes.code);
     if (redir) redirect(redir);
@@ -41,6 +47,7 @@ export default async function AdminNasabahDetailPage({
     );
   }
 
+  const isSuperAdmin = sesi?.role === "super_admin";
   const nasabah = nasabahRes.data;
   const limit = LIMIT.HISTORI_DEFAULT;
   const historiRes = await queries.getHistori({
@@ -87,9 +94,32 @@ export default async function AdminNasabahDetailPage({
                   {nasabah.aktif ? "Aktif" : "Nonaktif"}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-mono mt-1">
-                ID Nasabah: <span className="text-emerald-400 font-semibold">{nasabah.username}</span>
-              </p>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-1.5">
+                <p className="text-xs text-slate-400 font-mono">
+                  ID Nasabah: <span className="text-emerald-400 font-semibold">{nasabah.username}</span>
+                </p>
+
+                {/* Reset Password Button khusus Super Admin */}
+                {isSuperAdmin && (
+                  <ResetPasswordDialog
+                    userId={nasabah.id}
+                    username={nasabah.username}
+                    nama={nasabah.nama}
+                    role="nasabah"
+                    customTrigger={(openDialog) => (
+                      <button
+                        type="button"
+                        onClick={openDialog}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 hover:text-amber-300 text-xs font-medium transition-colors"
+                        title="Reset password nasabah ini"
+                      >
+                        <KeyRound className="w-3 h-3" />
+                        <span>Reset Password</span>
+                      </button>
+                    )}
+                  />
+                )}
+              </div>
             </div>
           </div>
 

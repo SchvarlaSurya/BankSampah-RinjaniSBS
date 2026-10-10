@@ -7,13 +7,14 @@
  * Import lewat saklar: src/lib/api/queries.ts
  */
 
-import type { Queries, TransaksiRingkas } from "@/src/contract";
+import type { Queries, TransaksiRingkas, JenisSampah } from "@/src/contract";
 import { ok, fail } from "@/src/contract";
 import {
   activeSesi,
   mockNasabah,
   mockStaf,
   mockJenisSampah,
+  mockRiwayatHarga,
   mockTransaksi,
   allUsersById,
 } from "./_store";
@@ -64,11 +65,37 @@ export const mockQueries: Queries = {
 
   async listJenisSampah(input) {
     await delay();
-    if (!activeSesi) return fail("TIDAK_LOGIN");
-    const termasukNonaktif = input?.termasukNonaktif ?? false;
-    const hasil = termasukNonaktif
+    const isAdmin = activeSesi?.role === "admin" || activeSesi?.role === "super_admin";
+    const termasukNonaktif = isAdmin ? (input?.termasukNonaktif ?? false) : false;
+    const rows = termasukNonaktif
       ? mockJenisSampah
       : mockJenisSampah.filter((j) => j.aktif);
+
+    const hasil: JenisSampah[] = rows.map((j) => {
+      const item: JenisSampah = {
+        id: j.id,
+        nama: j.nama,
+        hargaBeli: j.hargaBeli,
+        aktif: j.aktif,
+        terakhirDiubah: j.terakhirDiubah,
+      };
+      if (isAdmin) {
+        item.hargaJual = j.hargaJual ?? Math.round(j.hargaBeli * 1.2);
+      }
+      return item;
+    });
+    return ok(hasil);
+  },
+
+  async listRiwayatHarga(input) {
+    await delay();
+    if (!activeSesi) return fail("TIDAK_LOGIN");
+    if (activeSesi.role !== "super_admin") return fail("TIDAK_DIIZINKAN");
+
+    let hasil = [...mockRiwayatHarga];
+    if (input?.sampahId) {
+      hasil = hasil.filter((r) => r.sampahId === input.sampahId);
+    }
     return ok(hasil);
   },
 
@@ -162,6 +189,87 @@ export const mockQueries: Queries = {
     return ok({
       items: slice,
       nextCursor,
+    });
+  },
+
+  async listPengguna(input) {
+    await delay();
+    if (!activeSesi) return fail("TIDAK_LOGIN");
+    if (activeSesi.role !== "super_admin" && activeSesi.role !== "admin") return fail("TIDAK_DIIZINKAN");
+
+    // Gather all users from mockStaf + mockNasabah
+    let allUsers: Array<{
+      id: any;
+      username: string;
+      nama: string;
+      role: "super_admin" | "admin" | "nasabah";
+      aktif: boolean;
+      rt: string | null;
+      mustChangePassword: boolean;
+      createdAt: string;
+    }> = [
+      ...mockStaf.map((s) => ({
+        id: s.id,
+        username: s.username,
+        nama: s.nama,
+        role: s.role,
+        aktif: s.aktif,
+        rt: null,
+        mustChangePassword: false,
+        createdAt: new Date().toISOString(),
+      })),
+      ...mockNasabah.map((n) => ({
+        id: n.id,
+        username: n.username,
+        nama: n.nama,
+        role: "nasabah" as const,
+        aktif: n.aktif,
+        rt: /^\d{2}/.test(n.username) ? n.username.slice(0, 2) : null,
+        mustChangePassword: false,
+        createdAt: new Date().toISOString(),
+      })),
+    ];
+
+    // Admin basic enforcement
+    let roleFilter = input?.role;
+    if (activeSesi.role === "admin") {
+      roleFilter = "nasabah";
+    }
+
+    if (roleFilter) {
+      allUsers = allUsers.filter((u) => u.role === roleFilter);
+    } else if (activeSesi.role === "admin") {
+      allUsers = allUsers.filter((u) => u.role === "nasabah");
+    }
+
+    if (input?.aktif !== undefined) {
+      allUsers = allUsers.filter((u) => u.aktif === input.aktif);
+    }
+
+    if (input?.rt) {
+      const rtClean = input.rt.padStart(2, "0");
+      allUsers = allUsers.filter((u) => u.username.startsWith(rtClean));
+    }
+
+    if (input?.search) {
+      const q = input.search.toLowerCase();
+      allUsers = allUsers.filter(
+        (u) =>
+          u.username.toLowerCase().includes(q) ||
+          u.nama.toLowerCase().includes(q)
+      );
+    }
+
+    const limit = input?.limit ?? 20;
+    const offset = input?.offset ?? 0;
+    const total = allUsers.length;
+    const items = allUsers.slice(offset, offset + limit);
+
+    return ok({
+      items,
+      total,
+      limit,
+      offset,
     });
   },
 };
