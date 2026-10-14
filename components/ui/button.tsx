@@ -16,7 +16,8 @@ const dasar =
 
 const varian: Record<ButtonVariant, string> = {
   primary: "bg-brand text-on-brand hover:bg-brand-hover",
-  secondary: "border border-line bg-surface text-ink hover:bg-surface-muted hover:border-line-strong",
+  secondary:
+    "border border-button-secondary-border bg-button-secondary-bg text-ink hover:bg-button-secondary-hover",
   ghost: "text-ink-muted hover:bg-surface-muted hover:text-ink",
   danger: "bg-danger-fg text-white hover:brightness-95",
   // Khusus halaman publik: CTA utama berwarna hangat.

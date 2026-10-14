@@ -1,6 +1,10 @@
 import { cn } from "@/lib/utils";
 
-/** Judul halaman dashboard: eyebrow kecil, judul, deskripsi, aksi di kanan. Inter, bukan condensed. */
+/**
+ * Kepala konten dashboard: judul (opsional) + satu baris deskripsi + aksi. Halaman utama tiap
+ * bagian tidak mengulang judul karena judul bagian sudah tampil di header atas (AppShell).
+ * Inter, bukan condensed.
+ */
 export function PageHeader({
   eyebrow,
   title,
@@ -9,7 +13,7 @@ export function PageHeader({
   className,
 }: {
   eyebrow?: React.ReactNode;
-  title: React.ReactNode;
+  title?: React.ReactNode;
   description?: React.ReactNode;
   actions?: React.ReactNode;
   className?: string;
@@ -18,7 +22,7 @@ export function PageHeader({
     <header className={cn("flex flex-wrap items-end justify-between gap-4", className)}>
       <div className="min-w-0 space-y-1">
         {eyebrow && <p className="text-xs font-semibold tracking-wide text-brand uppercase">{eyebrow}</p>}
-        <h1 className="text-2xl font-semibold tracking-tight text-ink sm:text-[1.75rem]">{title}</h1>
+        {title && <h2 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">{title}</h2>}
         {description && <p className="max-w-2xl text-sm text-ink-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

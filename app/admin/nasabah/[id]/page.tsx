@@ -3,19 +3,22 @@ import Link from "next/link";
 import { queries } from "@/lib/api/queries";
 import { formatRupiah, ERROR_MESSAGES, redirectUntukError, LIMIT } from "@/contract";
 import {
-  UserCheck,
-  Wallet,
-  ArrowLeft,
   ArrowDownLeft,
+  ArrowLeft,
   ArrowUpRight,
-  History,
-  ChevronRight,
-  RotateCcw,
-  UserX,
   ChevronLeft,
-  AlertCircle,
+  ChevronRight,
+  History,
   SlidersHorizontal,
+  UserCheck,
+  UserX,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { buttonClass } from "@/components/ui/button";
+import { Card, CardHeader } from "@/components/ui/card";
+import { Alert, EmptyState } from "@/components/ui/feedback";
+import { Stat } from "@/components/ui/page";
+import { BarisTransaksi } from "@/components/transaksi-tampilan";
 import ResetPasswordDialog from "@/components/ResetPasswordDialog";
 
 export const dynamic = "force-dynamic";
@@ -39,12 +42,7 @@ export default async function AdminNasabahDetailPage({
     const redir = redirectUntukError(nasabahRes.code);
     if (redir) redirect(redir);
     if (nasabahRes.code === "NASABAH_TIDAK_DITEMUKAN") notFound();
-    return (
-      <div className="p-6 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-300 text-sm flex items-center gap-3">
-        <AlertCircle className="w-4 h-4 shrink-0" />
-        {nasabahRes.message || ERROR_MESSAGES[nasabahRes.code]}
-      </div>
-    );
+    return <Alert tone="danger">{nasabahRes.message || ERROR_MESSAGES[nasabahRes.code]}</Alert>;
   }
 
   const isSuperAdmin = sesi?.role === "super_admin";
@@ -62,44 +60,28 @@ export default async function AdminNasabahDetailPage({
 
   return (
     <div className="space-y-6">
-      {/* Top Breadcrumb & Back */}
-      <div className="flex items-center justify-between">
-        <Link
-          href="/admin"
-          className="inline-flex items-center gap-2 text-xs font-medium text-slate-400 hover:text-emerald-400 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Kembali ke Pencarian Nasabah</span>
-        </Link>
-      </div>
+      <Link href="/admin" className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted hover:text-ink">
+        <ArrowLeft className="size-4" aria-hidden="true" />
+        Kembali ke pencarian
+      </Link>
 
-      {/* Nasabah Profile Card & Action Bar */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-800/80">
+      {/* Profil + saldo + aksi */}
+      <Card>
+        <div className="flex flex-col gap-6 p-5 sm:p-6 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xl shrink-0 shadow-inner">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-surface-muted text-lg font-semibold text-ink ring-1 ring-line ring-inset">
               {nasabah.nama.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-xl sm:text-2xl font-bold text-white">{nasabah.nama}</h1>
-                <span
-                  className={`px-2.5 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${
-                    nasabah.aktif
-                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                      : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                  }`}
-                >
-                  {nasabah.aktif ? <UserCheck className="w-3 h-3" /> : <UserX className="w-3 h-3" />}
-                  {nasabah.aktif ? "Aktif" : "Nonaktif"}
+            </span>
+            <div className="min-w-0 space-y-1.5">
+              <h2 className="text-xl font-semibold text-ink sm:text-2xl">{nasabah.nama}</h2>
+              <div className="flex flex-wrap items-center gap-2 text-sm text-ink-muted">
+                <span>
+                  ID Nasabah <span className="font-medium text-ink tabular-nums">{nasabah.username}</span>
                 </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-1.5">
-                <p className="text-xs text-slate-400 font-mono">
-                  ID Nasabah: <span className="text-emerald-400 font-semibold">{nasabah.username}</span>
-                </p>
-
-                {/* Reset Password Button khusus Super Admin */}
+                <Badge tone={nasabah.aktif ? "success" : "danger"}>
+                  {nasabah.aktif ? <UserCheck aria-hidden="true" /> : <UserX aria-hidden="true" />}
+                  {nasabah.aktif ? "Aktif" : "Nonaktif"}
+                </Badge>
                 {isSuperAdmin && (
                   <ResetPasswordDialog
                     userId={nasabah.id}
@@ -113,169 +95,78 @@ export default async function AdminNasabahDetailPage({
             </div>
           </div>
 
-          {/* Balance Display */}
-          <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 md:px-6 flex flex-col justify-center">
-            <span className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mb-1">
-              <Wallet className="w-4 h-4 text-emerald-400" />
-              Saldo Rekening Nasabah
-            </span>
-            <span className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono tracking-tight">
-              {formatRupiah(nasabah.saldo)}
-            </span>
+          <div className="rounded-control bg-surface-muted px-5 py-4 ring-1 ring-line ring-inset md:min-w-60">
+            <Stat label="Saldo saat ini" value={formatRupiah(nasabah.saldo)} emphasis />
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Link
-            href={`/admin/nasabah/${nasabah.id}/setor`}
-            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm rounded-2xl py-3.5 px-6 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 group"
-          >
-            <ArrowDownLeft className="w-5 h-5 text-slate-950 group-hover:scale-110 transition-transform" />
-            <span>Setor Sampah Baru</span>
+        <div className="grid gap-3 border-t border-line p-5 sm:grid-cols-3 sm:p-6">
+          <Link href={`/admin/nasabah/${nasabah.id}/setor`} className={buttonClass("primary", "lg")}>
+            <ArrowDownLeft aria-hidden="true" />
+            Setor sampah
           </Link>
-
-          <Link
-            href={`/admin/nasabah/${nasabah.id}/tarik`}
-            className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-bold text-sm rounded-2xl py-3.5 px-6 transition-all flex items-center justify-center gap-2 shadow-md hover:border-slate-600 group"
-          >
-            <ArrowUpRight className="w-5 h-5 text-amber-400 group-hover:scale-110 transition-transform" />
-            <span>Penarikan Saldo Tunai</span>
+          <Link href={`/admin/nasabah/${nasabah.id}/tarik`} className={buttonClass("secondary", "lg")}>
+            <ArrowUpRight aria-hidden="true" />
+            Tarik saldo
           </Link>
-
-          <Link
-            href={`/admin/nasabah/${nasabah.id}/penyesuaian`}
-            className="sm:col-span-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-semibold text-sm rounded-2xl py-3 px-6 transition-all flex items-center justify-center gap-2 group"
-          >
-            <SlidersHorizontal className="w-5 h-5 text-sky-400 group-hover:scale-110 transition-transform" />
-            <span>Penyesuaian Saldo</span>
+          <Link href={`/admin/nasabah/${nasabah.id}/penyesuaian`} className={buttonClass("secondary", "lg")}>
+            <SlidersHorizontal aria-hidden="true" />
+            Penyesuaian saldo
           </Link>
         </div>
-      </div>
+      </Card>
 
-      {/* Histori Mutasi Section */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xl">
-        <div className="flex items-center justify-between pb-2">
-          <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
-            <History className="w-4 h-4 text-emerald-400" />
-            <span>Riwayat Mutasi &amp; Transaksi</span>
-          </h2>
-          {cursor && (
-            <span className="text-xs text-slate-500 font-mono">Halaman berikutnya</span>
-          )}
-        </div>
+      {/* Riwayat */}
+      <Card>
+        <CardHeader
+          title={
+            <span className="flex items-center gap-2">
+              <History className="size-4 text-ink-muted" aria-hidden="true" />
+              Riwayat transaksi
+            </span>
+          }
+          actions={cursor ? <span className="text-xs text-ink-muted">Halaman berikutnya</span> : undefined}
+        />
 
         {hasHistoriError ? (
-          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-3">
-            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-            <span>
+          <div className="p-5">
+            <Alert tone="danger">
               {!historiRes.ok
                 ? historiRes.message || ERROR_MESSAGES[historiRes.code]
                 : "Gagal memuat riwayat transaksi."}
-            </span>
+            </Alert>
           </div>
         ) : historiItems.length === 0 ? (
-          <div className="py-12 text-center text-slate-500 text-sm">
-            {cursor
-              ? "Tidak ada transaksi lagi pada halaman ini."
-              : "Belum ada riwayat transaksi untuk nasabah ini."}
-          </div>
+          <EmptyState
+            icon={<History />}
+            title={cursor ? "Tidak ada transaksi lagi" : "Belum ada transaksi"}
+            description={
+              cursor
+                ? "Tidak ada transaksi lagi pada halaman ini."
+                : "Riwayat akan muncul setelah setor, tarik, atau penyesuaian pertama."
+            }
+          />
         ) : (
-          <div className="divide-y divide-slate-800/60">
-            {historiItems.map((tx) => {
-              const isSetor = tx.tipe === "setor";
-              const isTarik = tx.tipe === "tarik";
-              const isKoreksi = tx.tipe === "koreksi";
-
-              return (
-                <div
-                  key={tx.id}
-                  className="py-3.5 flex items-center justify-between gap-4 hover:bg-slate-800/30 px-2 rounded-xl transition-colors"
-                >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <div
-                      className={`p-2.5 rounded-xl border shrink-0 ${
-                        isSetor
-                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                          : isTarik
-                          ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                          : "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                      }`}
-                    >
-                      {isSetor && <ArrowDownLeft className="w-4 h-4" />}
-                      {isTarik && <ArrowUpRight className="w-4 h-4" />}
-                      {isKoreksi && <RotateCcw className="w-4 h-4" />}
-                      {tx.tipe === "penyesuaian" && <SlidersHorizontal className="w-4 h-4" />}
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm text-slate-200 capitalize">
-                          {tx.tipe}
-                        </span>
-                        {tx.sudahDibalik && (
-                          <span className="px-1.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-medium">
-                            Dibalik
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-400 truncate">
-                        {tx.catatan || `Diproses oleh: ${tx.dibuatOlehNama}`}
-                      </p>
-                      <p className="text-[11px] text-slate-500 font-mono mt-0.5">
-                        {new Date(tx.waktu).toLocaleString("id-ID", {
-                          timeZone: "Asia/Jakarta",
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}{" "}
-                        WIB
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0">
-                    <div className="text-right">
-                      <span
-                        className={`text-sm font-bold font-mono ${
-                          tx.jumlah > 0 ? "text-emerald-400" : "text-rose-400"
-                        }`}
-                      >
-                        {tx.jumlah > 0 ? "+" : ""}
-                        {formatRupiah(tx.jumlah)}
-                      </span>
-                    </div>
-
-                    <Link
-                      href={`/admin/transaksi/${tx.id}`}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-                      title="Lihat Detail Transaksi"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <ul className="divide-y divide-line">
+            {historiItems.map((tx) => (
+              <BarisTransaksi key={tx.id} tx={tx} href={`/admin/transaksi/${tx.id}`} />
+            ))}
+          </ul>
         )}
 
-        {/* Pagination Controls */}
         {(cursor || nextCursor) && (
-          <div className="flex items-center justify-between pt-4 border-t border-slate-800/60">
+          <nav aria-label="Halaman riwayat" className="flex items-center justify-between border-t border-line px-5 py-3">
             <Link
               href={
                 prev
                   ? `/admin/nasabah/${id}?cursor=${prev}`
                   : `/admin/nasabah/${id}`
               }
-              className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg transition-colors ${
-                cursor
-                  ? "text-slate-300 hover:text-white hover:bg-slate-800"
-                  : "text-slate-600 pointer-events-none"
-              }`}
+              aria-disabled={!cursor}
+              className={buttonClass("ghost", "md", cursor ? "" : "pointer-events-none opacity-40")}
             >
-              <ChevronLeft className="w-3.5 h-3.5" />
-              <span>Sebelumnya</span>
+              <ChevronLeft aria-hidden="true" />
+              Sebelumnya
             </Link>
 
             <Link
@@ -284,29 +175,15 @@ export default async function AdminNasabahDetailPage({
                   ? `/admin/nasabah/${id}?cursor=${nextCursor}${cursor ? `&prev=${cursor}` : ""}`
                   : "#"
               }
-              className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg transition-colors ${
-                nextCursor
-                  ? "text-slate-300 hover:text-white hover:bg-slate-800"
-                  : "text-slate-600 pointer-events-none"
-              }`}
+              aria-disabled={!nextCursor}
+              className={buttonClass("ghost", "md", nextCursor ? "" : "pointer-events-none opacity-40")}
             >
-              <span>Berikutnya</span>
-              <ChevronRight className="w-3.5 h-3.5" />
+              {nextCursor && !cursor ? "Muat lebih banyak" : "Berikutnya"}
+              <ChevronRight aria-hidden="true" />
             </Link>
-          </div>
+          </nav>
         )}
-        {nextCursor && !cursor && (
-          <div className="flex justify-end pt-2">
-            <Link
-              href={`/admin/nasabah/${id}?cursor=${nextCursor}`}
-              className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-            >
-              <span>Muat lebih banyak</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        )}
-      </div>
+      </Card>
     </div>
   );
 }

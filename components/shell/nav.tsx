@@ -18,7 +18,8 @@ const IKON = {
   dashboard: LayoutDashboard,
 } as const;
 
-export type ItemNav = { href: string; label: string; ikon: keyof typeof IKON };
+/** label = teks menu desktop; labelPendek = teks bottom navigation (HP). */
+export type ItemNav = { href: string; label: string; labelPendek: string; ikon: keyof typeof IKON };
 
 function aktif(pathname: string, href: string, akar: string) {
   if (href === akar) {
@@ -46,7 +47,7 @@ export function NavSidebar({ items, akar }: { items: ItemNav[]; akar: string }) 
               sedang ? "bg-sidebar-active text-sidebar-text-active" : "text-sidebar-text hover:bg-sidebar-active/60 hover:text-sidebar-text-active",
             )}
           >
-            <Ikon className={cn("size-4 shrink-0", sedang && "text-brand-bright")} aria-hidden="true" />
+            <Ikon className={cn("size-4 shrink-0", sedang && "text-brand-bright")} strokeWidth={1.75} aria-hidden="true" />
             {label}
           </Link>
         );
@@ -55,13 +56,16 @@ export function NavSidebar({ items, akar }: { items: ItemNav[]; akar: string }) 
   );
 }
 
-/** Tab horizontal yang bisa digeser (HP/tablet, dan header nasabah). */
-export function NavTab({ items, akar, className }: { items: ItemNav[]; akar: string; className?: string }) {
+/** Bottom navigation (HP & tablet). Semua item muat tanpa scroll horizontal. */
+export function NavBawah({ items, akar }: { items: ItemNav[]; akar: string }) {
   const pathname = usePathname();
   return (
-    <nav aria-label="Menu utama" className={cn("-mx-4 overflow-x-auto px-4", className)}>
-      <ul className="flex min-w-max gap-1">
-        {items.map(({ href, label, ikon }) => {
+    <nav
+      aria-label="Menu utama"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
+    >
+      <ul className="grid" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+        {items.map(({ href, labelPendek, ikon }) => {
           const Ikon = IKON[ikon];
           const sedang = aktif(pathname, href, akar);
           return (
@@ -70,12 +74,14 @@ export function NavTab({ items, akar, className }: { items: ItemNav[]; akar: str
                 href={href}
                 aria-current={sedang ? "page" : undefined}
                 className={cn(
-                  "flex h-10 items-center gap-2 border-b-2 px-3 text-sm font-medium transition-colors duration-150",
-                  sedang ? "border-brand text-ink" : "border-transparent text-ink-muted hover:text-ink",
+                  "flex h-16 flex-col items-center justify-center gap-1 px-1 text-xs font-medium transition-colors duration-150",
+                  sedang ? "text-brand" : "text-ink-muted hover:text-ink",
                 )}
               >
-                <Ikon className="size-4 shrink-0" aria-hidden="true" />
-                {label}
+                <span className={cn("flex h-7 w-12 items-center justify-center rounded-full", sedang && "bg-brand-soft")}>
+                  <Ikon className="size-5" strokeWidth={1.75} aria-hidden="true" />
+                </span>
+                <span className="max-w-full truncate">{labelPendek}</span>
               </Link>
             </li>
           );
@@ -83,4 +89,11 @@ export function NavTab({ items, akar, className }: { items: ItemNav[]; akar: str
       </ul>
     </nav>
   );
+}
+
+/** Judul bagian di header atas = label menu yang sedang aktif. */
+export function JudulBagian({ items, akar }: { items: ItemNav[]; akar: string }) {
+  const pathname = usePathname();
+  const item = items.find(({ href }) => aktif(pathname, href, akar));
+  return <h1 className="truncate text-base font-semibold text-ink">{item?.label ?? items[0]?.label}</h1>;
 }

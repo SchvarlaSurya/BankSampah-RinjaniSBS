@@ -2,10 +2,10 @@ import { cn } from "@/lib/utils";
 
 /**
  * Kontrol form. Semua props (name, id, value, onChange, required, ...) diteruskan apa adanya.
- * Tinggi 44px, border >= 3:1, fokus ring primary, keadaan error lewat aria-invalid.
+ * Tinggi 44px, latar putih, border token control-border, fokus ring brand, error lewat aria-invalid.
  */
 const kontrol =
-  "w-full rounded-control border border-line-strong bg-surface px-3.5 text-[0.9375rem] text-ink " +
+  "w-full rounded-control border border-control-border bg-surface px-3.5 text-[0.9375rem] text-ink " +
   "transition-[border-color,box-shadow] duration-150 ease-standard " +
   "focus:border-brand focus:outline-none focus:ring-3 focus:ring-brand/20 " +
   "disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-ink-muted " +

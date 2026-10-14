@@ -2,7 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ArrowRight, Loader2 } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { inputClass } from "@/components/ui/field";
 
 /** Form pencarian: hanya mengubah ?q= di URL; data dibaca ulang oleh Server Component. */
 export function CariNasabahForm({ awal }: { awal: string }) {
@@ -19,36 +21,30 @@ export function CariNasabahForm({ awal }: { awal: string }) {
 
   return (
     <form
+      role="search"
       onSubmit={(e) => {
         e.preventDefault();
         cari(query);
       }}
-      className="flex flex-col sm:flex-row gap-3 pt-2"
+      className="flex flex-col gap-3 sm:flex-row"
     >
+      <label htmlFor="cari-nasabah" className="sr-only">
+        Cari nasabah berdasarkan ID atau nama
+      </label>
       <div className="relative flex-1">
-        <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-ink-subtle" aria-hidden="true" />
         <input
-          type="text"
+          id="cari-nasabah"
+          type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Ketik nama atau ID nasabah (contoh: nasabah01)..."
-          className="w-full bg-slate-950/80 border border-slate-700/80 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-slate-100 placeholder-slate-500 text-sm rounded-xl pl-10 pr-4 py-3 outline-none transition-all"
+          placeholder="ID nasabah (mis. 0101) atau nama"
+          className={`${inputClass} pl-10`}
         />
       </div>
-      <button
-        type="submit"
-        disabled={pending}
-        className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm rounded-xl px-5 py-3 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 shrink-0"
-      >
-        {pending ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <>
-            <span>Cari</span>
-            <ArrowRight className="w-4 h-4" />
-          </>
-        )}
-      </button>
+      <Button type="submit" disabled={pending} className="h-11 sm:w-28">
+        {pending ? <Loader2 className="animate-spin" /> : "Cari"}
+      </Button>
     </form>
   );
 }

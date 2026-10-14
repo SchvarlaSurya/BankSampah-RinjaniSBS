@@ -32,7 +32,11 @@
   --surface: #ffffff; /* kartu, tabel, form */
   --surface-muted: #fafbf8; /* header tabel, area sekunder di dalam kartu */
   --line: #e4e6e0; /* border dekoratif / pemisah */
-  --line-strong: #868d83; /* batas kontrol form (>= 3:1 terhadap putih) */
+  --line-strong: #868d83; /* garis yang perlu menonjol (>= 3:1 terhadap putih) */
+  --control-border: #e4e6e0; /* border input/select (arahan: sama dengan border kartu; fokus lewat ring brand) */
+  --button-secondary-bg: #f1f3ee; /* tombol sekunder: tidak menyatu dengan kartu putih */
+  --button-secondary-border: #d3d8ce;
+  --button-secondary-hover: #e7eae2;
   --ink: #1a1d1a; /* teks utama */
   --ink-muted: #5c635b; /* teks sekunder */
   --ink-subtle: #6b7269; /* placeholder, keterangan kecil */
@@ -85,7 +89,7 @@
   --accent-foreground: var(--ink);
   --destructive: var(--danger-fg);
   --border: var(--line);
-  --input: var(--line-strong);
+  --input: var(--control-border);
   --ring: var(--brand);
   --radius: 0.5rem;
 }
@@ -103,6 +107,10 @@
   --color-surface-muted: var(--surface-muted);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
+  --color-control-border: var(--control-border);
+  --color-button-secondary-bg: var(--button-secondary-bg);
+  --color-button-secondary-border: var(--button-secondary-border);
+  --color-button-secondary-hover: var(--button-secondary-hover);
   --color-ink: var(--ink);
   --color-ink-muted: var(--ink-muted);
   --color-ink-subtle: var(--ink-subtle);
