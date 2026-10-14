@@ -1,20 +1,29 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Barlow_Condensed, Inter } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Dua keluarga font saja: Inter (UI & isi) dan Barlow Condensed (judul halaman publik,
+// senada dengan wordmark logo). Barlow Condensed tidak dipakai di tabel/form.
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const barlowCondensed = Barlow_Condensed({
+  variable: "--font-barlow-condensed",
   subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "SBS Rinjani | Bank Sampah",
   description: "Layanan Bank Sampah Rinjani SBS",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#f5f6f3",
 };
 
 export default function RootLayout({
@@ -23,13 +32,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="id"
-      className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-950`}
-    >
-      <body className="min-h-screen overflow-x-hidden overflow-y-auto bg-slate-950 text-slate-100 flex flex-col font-sans">
-        {children}
-      </body>
+    <html lang="id" className={`${inter.variable} ${barlowCondensed.variable}`}>
+      <body className="flex min-h-screen flex-col overflow-x-hidden">{children}</body>
     </html>
   );
 }
