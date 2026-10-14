@@ -1,6 +1,7 @@
 // Fungsi baca untuk Server Component. Objek `realQueries` di akhir file dipakai saklar frontend.
 import "server-only";
 import { and, asc, desc, eq, gte, ilike, inArray, lt, or, sql, type SQL } from "drizzle-orm";
+import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import {
   type ActionResult,
@@ -71,6 +72,7 @@ export async function getSesi(): Promise<SesiInfo | null> {
     const { userId, username, nama, role, mustChangePassword } = g.sesi;
     return { userId, username, nama, role, mustChangePassword };
   } catch (e) {
+    unstable_rethrow(e); // redirect/notFound/dynamic-usage milik Next tidak boleh tertelan
     logServer("getSesi", e);
     return null;
   }

@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_rethrow } from "next/navigation";
 import { type ActionResult, fail } from "@/contract";
 import { logServer } from "../errors";
 import { type NamaAkses, requireAkses, type SesiServer } from "../guards";
@@ -17,6 +18,7 @@ export async function jalankan<T>(
     if (!g.ok) return g.hasil;
     return await fn(g.sesi);
   } catch (e) {
+    unstable_rethrow(e); // redirect/notFound/dynamic-usage milik Next tidak boleh tertelan
     logServer(nama, e);
     return fail("SERVER_ERROR");
   }
