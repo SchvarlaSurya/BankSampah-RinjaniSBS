@@ -1,110 +1,58 @@
 import { redirect } from "next/navigation";
 import { queries } from "@/lib/api/queries";
-import { formatRupiah, redirectUntukError } from "@/contract";
-import { FileCheck, Calendar, User, Scale, ImageIcon } from "lucide-react";
+import { redirectUntukError, TIPE_TRANSAKSI, type TipeTransaksi } from "@/contract";
+import { AlertCircle } from "lucide-react";
+import { AuditView, type FilterAudit } from "./audit-view";
 
-export default async function AuditTransaksiPage() {
-  const [sesi, auditRes] = await Promise.all([
-    queries.getSesi(),
-    queries.auditTransaksi({ limit: 50 }),
-  ]);
+type Params = { [key: string]: string | string[] | undefined };
+const teks = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
 
-  if (!sesi) redirect("/login");
-  if (sesi.role !== "super_admin") redirect("/admin");
+export default async function AuditTransaksiPage({ searchParams }: { searchParams: Promise<Params> }) {
+  const sp = await searchParams;
+  const tipe = teks(sp.tipe);
+  const filter: FilterAudit = {
+    adminId: teks(sp.admin),
+    tipe: (TIPE_TRANSAKSI as readonly string[]).includes(tipe) ? (tipe as TipeTransaksi) : "",
+    dari: teks(sp.dari),
+    sampai: teks(sp.sampai),
+  };
+  const cursor = teks(sp.cursor) || undefined;
+  const jejak = teks(sp.jejak).split(",").filter((c) => c === "-" || /^\d{1,18}$/.test(c));
 
-  if (!auditRes.ok) {
-    const redir = redirectUntukError(auditRes.code);
+  const stafRes = await queries.listStaf();
+  if (!stafRes.ok) {
+    const redir = redirectUntukError(stafRes.code);
     if (redir) redirect(redir);
     return (
-      <div className="p-6 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-300 text-sm">
-        {auditRes.message}
+      <div className="p-6 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-300 text-sm flex items-center gap-3">
+        <AlertCircle className="w-4 h-4 shrink-0" />
+        {stafRes.message}
       </div>
     );
   }
 
-  const items = auditRes.data.items;
+  const res = await queries.auditTransaksi({
+    adminId: filter.adminId || undefined,
+    tipe: filter.tipe || undefined,
+    dari: filter.dari || undefined,
+    sampai: filter.sampai || undefined,
+    cursor,
+    limit: 20,
+  });
+  if (!res.ok) {
+    const redir = redirectUntukError(res.code);
+    if (redir) redirect(redir);
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-3 shadow-xl">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-          <FileCheck className="w-3.5 h-3.5" />
-          <span>Super Admin Audit Mode</span>
-        </div>
-        <h1 className="text-2xl font-bold text-white">Audit Transaksi & Foto Timbangan</h1>
-        <p className="text-xs text-slate-400 max-w-xl">
-          Log pemeriksaan transaksi lengkap dengan perbandingan foto timbangan dan rincian barang.
-        </p>
-      </div>
-
-      <div className="space-y-4">
-        {items.length === 0 ? (
-          <div className="py-12 bg-slate-900/60 border border-slate-800 rounded-3xl text-center text-slate-500 text-sm">
-            Belum ada log audit transaksi.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {items.map((tx) => (
-              <div
-                key={tx.id}
-                className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-lg flex flex-col justify-between"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 text-xs font-semibold capitalize">
-                      {tx.tipe}
-                    </span>
-                    <span
-                      className={`text-base font-extrabold font-mono ${
-                        tx.jumlah > 0 ? "text-emerald-400" : "text-rose-400"
-                      }`}
-                    >
-                      {tx.jumlah > 0 ? "+" : ""}
-                      {formatRupiah(tx.jumlah)}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-slate-500 block">Nasabah</span>
-                      <span className="font-semibold text-slate-200">{tx.customerNama}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block">Petugas</span>
-                      <span className="font-semibold text-slate-200">{tx.dibuatOlehNama}</span>
-                    </div>
-                  </div>
-
-                  <div className="text-xs text-slate-500 font-mono">
-                    {new Date(tx.waktu).toLocaleString("id-ID", {
-                      timeZone: "Asia/Jakarta",
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}{" "}
-                    WIB
-                  </div>
-                </div>
-
-                {tx.fotoUrl && (
-                  <div className="pt-3 border-t border-slate-800/80 space-y-2">
-                    <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                      <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
-                      Foto Timbangan Validasi
-                    </span>
-                    <div className="w-full h-48 rounded-2xl overflow-hidden border border-slate-800 bg-slate-950">
-                      <img
-                        src={tx.fotoUrl}
-                        alt="Audit Foto"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+    <AuditView
+      stafList={stafRes.data}
+      auditItems={res.ok ? res.data.items : []}
+      nextCursor={res.ok ? res.data.nextCursor : null}
+      filter={filter}
+      cursor={cursor}
+      jejak={jejak}
+      errorMessage={res.ok ? null : res.message}
+    />
   );
 }

@@ -2,6 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { queries } from "@/lib/api/queries";
 import { formatRupiah, redirectUntukError } from "@/contract";
+
+export const dynamic = "force-dynamic";
 import {
   ArrowLeft,
   ArrowDownLeft,

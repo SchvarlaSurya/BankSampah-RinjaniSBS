@@ -13,6 +13,7 @@ import {
   ERROR_MESSAGES,
   FOTO_MIME,
   LIMIT,
+  SetorItemSchema,
 } from "@/contract";
 import {
   ArrowLeft,
@@ -26,6 +27,12 @@ import {
   Scale,
   DollarSign,
 } from "lucide-react";
+
+/** "1.500.000" byte -> "1,5 MB" untuk pesan ke pengguna. */
+const BATAS_FOTO = `${(LIMIT.FOTO_MAKS_BYTES / 1_000_000).toLocaleString("id-ID")} MB`;
+
+/** Koma desimal -> titik; titik di akhir dibuang ("12," -> "12"). */
+const beratBersih = (berat: string) => berat.trim().replace(/,/g, ".").replace(/\.$/, "");
 
 /** Data nasabah & jenis sampah datang dari Server Component (page.tsx). */
 export function SetorForm({
@@ -107,7 +114,7 @@ export function SetorForm({
     }
 
     if (file.size > LIMIT.FOTO_MAKS_BYTES) {
-      setErrorMessage("Ukuran foto melebihi batas maksimal (5 MB).");
+      setErrorMessage(`Ukuran foto melebihi batas maksimal (${BATAS_FOTO}).`);
       if (photoInputRef.current) photoInputRef.current.value = "";
       return;
     }
@@ -163,12 +170,10 @@ export function SetorForm({
       if (!item.berat || item.berat.trim() === "") {
         errors[`items.${idx}.berat`] = [`Berat pada ${itemLabel} belum diisi.`];
       } else {
-        const cleanStr = item.berat.replace(/,/g, '.').replace(/\.$/, '');
-        const beratNum = parseFloat(cleanStr);
-        if (isNaN(beratNum) || beratNum <= 0) {
-          errors[`items.${idx}.berat`] = [`Berat pada ${itemLabel} harus lebih dari 0 kg.`];
-        } else if (beratNum > 500) {
-          errors[`items.${idx}.berat`] = [`Berat pada ${itemLabel} maksimal 500 kg.`];
+        // Aturan berat sama dengan server (string desimal, maks 2 angka di belakang titik).
+        const cek = SetorItemSchema.shape.berat.safeParse(beratBersih(item.berat));
+        if (!cek.success) {
+          errors[`items.${idx}.berat`] = [`${itemLabel}: ${cek.error.issues[0].message}`];
         }
       }
     }
@@ -196,16 +201,19 @@ export function SetorForm({
       return;
     }
 
+    if (!fotoFile) {
+      setErrorMessage(ERROR_MESSAGES.FOTO_WAJIB);
+      photoInputRef.current?.focus();
+      return;
+    }
+
     setLoading(true);
 
     try {
       const formData = buildSetorFormData(
         {
           customerId,
-          items: items.map((i) => ({ 
-            wasteTypeId: i.wasteTypeId, 
-            berat: parseFloat(i.berat.replace(/,/g, '.').replace(/\.$/, '')) || 0 
-          })),
+          items: items.map((i) => ({ wasteTypeId: i.wasteTypeId, berat: beratBersih(i.berat) })),
           catatan: catatan || undefined,
           clientRequestId: clientRequestIdRef.current,
         },
@@ -235,9 +243,8 @@ export function SetorForm({
           duplikat: res.data.duplikat,
         });
       }
-    } catch (err: any) {
-      console.error("=== ERROR SUBMIT SETOR ===", err);
-      setErrorMessage(err?.message || ERROR_MESSAGES.SERVER_ERROR);
+    } catch {
+      setErrorMessage(ERROR_MESSAGES.SERVER_ERROR);
     } finally {
       setLoading(false);
     }
@@ -461,7 +468,7 @@ export function SetorForm({
           <div className="space-y-3 pt-2">
             <label className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
               <Camera className="w-4 h-4 text-emerald-400" />
-              Foto Dokumentasi (opsional)
+              Upload Foto Timbangan (Wajib)
             </label>
 
             <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -480,8 +487,8 @@ export function SetorForm({
                   className="w-full sm:w-auto bg-slate-950 hover:bg-slate-800 border-2 border-dashed border-slate-700 hover:border-emerald-500 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer transition-all text-center group"
                 >
                   <Camera className="w-8 h-8 text-slate-500 group-hover:text-emerald-400 mb-2 transition-colors" />
-                  <span className="text-xs font-semibold text-slate-200">Pilih Foto Dokumentasi</span>
-                  <span className="text-[10px] text-slate-500 mt-1">JPG, PNG, atau WebP (Maks 5 MB)</span>
+                  <span className="text-xs font-semibold text-slate-200">Pilih Foto Timbangan</span>
+                  <span className="text-[10px] text-slate-500 mt-1">JPG, PNG, atau WebP (Maks {BATAS_FOTO})</span>
                 </label>
               ) : (
                 <div className="flex items-center gap-4">

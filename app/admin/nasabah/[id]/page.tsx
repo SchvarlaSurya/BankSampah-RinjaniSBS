@@ -1,41 +1,64 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { queries } from "@/lib/api/queries";
-import { formatRupiah, ERROR_MESSAGES, redirectUntukError } from "@/contract";
-import { 
-  UserCheck, 
-  Wallet, 
-  ArrowLeft, 
-  ArrowDownLeft, 
-  ArrowUpRight, 
-  History, 
-  ChevronRight, 
+import { formatRupiah, ERROR_MESSAGES, redirectUntukError, LIMIT } from "@/contract";
+import {
+  UserCheck,
+  Wallet,
+  ArrowLeft,
+  ArrowDownLeft,
+  ArrowUpRight,
+  History,
+  ChevronRight,
   RotateCcw,
-  UserX
+  UserX,
+  ChevronLeft,
+  AlertCircle,
+  KeyRound,
 } from "lucide-react";
+import ResetPasswordDialog from "@/components/ResetPasswordDialog";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminNasabahDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ cursor?: string; prev?: string }>;
 }) {
   const { id } = await params;
-  
-  const nasabahRes = await queries.getNasabah({ customerId: id });
+  const { cursor, prev } = await searchParams;
+
+  const [sesi, nasabahRes] = await Promise.all([
+    queries.getSesi(),
+    queries.getNasabah({ customerId: id }),
+  ]);
+
   if (!nasabahRes.ok) {
     const redir = redirectUntukError(nasabahRes.code);
     if (redir) redirect(redir);
     if (nasabahRes.code === "NASABAH_TIDAK_DITEMUKAN") notFound();
     return (
-      <div className="p-6 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-300 text-sm">
+      <div className="p-6 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-300 text-sm flex items-center gap-3">
+        <AlertCircle className="w-4 h-4 shrink-0" />
         {nasabahRes.message || ERROR_MESSAGES[nasabahRes.code]}
       </div>
     );
   }
 
+  const isSuperAdmin = sesi?.role === "super_admin";
   const nasabah = nasabahRes.data;
-  const historiRes = await queries.getHistori({ customerId: id, limit: 20 });
+  const limit = LIMIT.HISTORI_DEFAULT;
+  const historiRes = await queries.getHistori({
+    customerId: id,
+    cursor: cursor || undefined,
+    limit,
+  });
+
   const historiItems = historiRes.ok ? historiRes.data.items : [];
+  const nextCursor = historiRes.ok ? historiRes.data.nextCursor : null;
+  const hasHistoriError = !historiRes.ok;
 
   return (
     <div className="space-y-6">
@@ -71,9 +94,32 @@ export default async function AdminNasabahDetailPage({
                   {nasabah.aktif ? "Aktif" : "Nonaktif"}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-mono mt-1">
-                ID Nasabah: <span className="text-emerald-400 font-semibold">{nasabah.username}</span>
-              </p>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-1.5">
+                <p className="text-xs text-slate-400 font-mono">
+                  ID Nasabah: <span className="text-emerald-400 font-semibold">{nasabah.username}</span>
+                </p>
+
+                {/* Reset Password Button khusus Super Admin */}
+                {isSuperAdmin && (
+                  <ResetPasswordDialog
+                    userId={nasabah.id}
+                    username={nasabah.username}
+                    nama={nasabah.nama}
+                    role="nasabah"
+                    customTrigger={(openDialog) => (
+                      <button
+                        type="button"
+                        onClick={openDialog}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 hover:text-amber-300 text-xs font-medium transition-colors"
+                        title="Reset password nasabah ini"
+                      >
+                        <KeyRound className="w-3 h-3" />
+                        <span>Reset Password</span>
+                      </button>
+                    )}
+                  />
+                )}
+              </div>
             </div>
           </div>
 
@@ -114,14 +160,27 @@ export default async function AdminNasabahDetailPage({
         <div className="flex items-center justify-between pb-2">
           <h2 className="text-base font-bold text-slate-200 flex items-center gap-2">
             <History className="w-4 h-4 text-emerald-400" />
-            <span>Riwayat Mutasi & Transaksi</span>
+            <span>Riwayat Mutasi &amp; Transaksi</span>
           </h2>
-          <span className="text-xs text-slate-500">20 Transaksi Terbaru</span>
+          {cursor && (
+            <span className="text-xs text-slate-500 font-mono">Halaman berikutnya</span>
+          )}
         </div>
 
-        {historiItems.length === 0 ? (
+        {hasHistoriError ? (
+          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-3">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>
+              {!historiRes.ok
+                ? historiRes.message || ERROR_MESSAGES[historiRes.code]
+                : "Gagal memuat riwayat transaksi."}
+            </span>
+          </div>
+        ) : historiItems.length === 0 ? (
           <div className="py-12 text-center text-slate-500 text-sm">
-            Belum ada riwayat transaksi untuk nasabah ini.
+            {cursor
+              ? "Tidak ada transaksi lagi pada halaman ini."
+              : "Belum ada riwayat transaksi untuk nasabah ini."}
           </div>
         ) : (
           <div className="divide-y divide-slate-800/60">
@@ -198,6 +257,54 @@ export default async function AdminNasabahDetailPage({
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {(cursor || nextCursor) && (
+          <div className="flex items-center justify-between pt-4 border-t border-slate-800/60">
+            <Link
+              href={
+                prev
+                  ? `/admin/nasabah/${id}?cursor=${prev}`
+                  : `/admin/nasabah/${id}`
+              }
+              className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg transition-colors ${
+                cursor
+                  ? "text-slate-300 hover:text-white hover:bg-slate-800"
+                  : "text-slate-600 pointer-events-none"
+              }`}
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Sebelumnya</span>
+            </Link>
+
+            <Link
+              href={
+                nextCursor
+                  ? `/admin/nasabah/${id}?cursor=${nextCursor}${cursor ? `&prev=${cursor}` : ""}`
+                  : "#"
+              }
+              className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg transition-colors ${
+                nextCursor
+                  ? "text-slate-300 hover:text-white hover:bg-slate-800"
+                  : "text-slate-600 pointer-events-none"
+              }`}
+            >
+              <span>Berikutnya</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        )}
+        {nextCursor && !cursor && (
+          <div className="flex justify-end pt-2">
+            <Link
+              href={`/admin/nasabah/${id}?cursor=${nextCursor}`}
+              className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+            >
+              <span>Muat lebih banyak</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
         )}
       </div>
