@@ -10,6 +10,7 @@ import {
   login,
   logout,
   resetPasswordPengguna,
+  sesuaikanSaldo,
   setor,
   setStatusPengguna,
   simpanJenisSampah,
@@ -30,4 +31,5 @@ export const realActions: Actions = {
   setor,
   tarik,
   koreksi,
+  sesuaikanSaldo,
 };

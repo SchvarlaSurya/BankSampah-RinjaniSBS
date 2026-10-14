@@ -48,8 +48,8 @@ export const transactions = pgTable(
     customerId: text("customer_id")
       .notNull()
       .references(() => user.id),
-    tipe: text("tipe", { enum: ["setor", "tarik", "koreksi"] }).notNull(),
-    // Bertanda: setor +, tarik -, koreksi = -jumlah transaksi asli.
+    tipe: text("tipe", { enum: ["setor", "tarik", "koreksi", "penyesuaian"] }).notNull(),
+    // Bertanda: setor +, tarik -, koreksi = -jumlah transaksi asli, penyesuaian = + atau -.
     jumlah: integer("jumlah").notNull(),
     dibuatOleh: text("dibuat_oleh")
       .notNull()
@@ -75,7 +75,7 @@ export const transactions = pgTable(
     }),
     check(
       "transactions_tipe_valid",
-      sql`${t.tipe} IN ('setor', 'tarik', 'koreksi')`,
+      sql`${t.tipe} IN ('setor', 'tarik', 'koreksi', 'penyesuaian')`,
     ),
     check("transactions_jumlah_bukan_nol", sql`${t.jumlah} <> 0`),
     check(
@@ -97,6 +97,16 @@ export const transactions = pgTable(
       "transactions_koreksi_valid",
       sql`${t.tipe} <> 'koreksi' OR (
         ${t.reversesId} IS NOT NULL
+        AND ${t.catatan} IS NOT NULL
+        AND btrim(${t.catatan}) <> ''
+      )`,
+    ),
+    check(
+      "transactions_penyesuaian_valid",
+      sql`${t.tipe} <> 'penyesuaian' OR (
+        ${t.reversesId} IS NULL
+        AND ${t.pathFoto} IS NULL
+        AND ${t.hashFoto} IS NULL
         AND ${t.catatan} IS NOT NULL
         AND btrim(${t.catatan}) <> ''
       )`,

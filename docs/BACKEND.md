@@ -7,7 +7,7 @@ sudah ada di `server/api/` dan diperiksa compiler lewat `server/api/conformance.
 
 | File | Isi |
 |---|---|
-| `server/api/actions.ts` | Server Actions (`"use server"`): login, logout, gantiPassword, buatPengguna, getLatestIdByRt, resetPasswordPengguna, setStatusPengguna, simpanJenisSampah, updateHargaSampah, setor, tarik, koreksi |
+| `server/api/actions.ts` | Server Actions (`"use server"`): login, logout, gantiPassword, buatPengguna, getLatestIdByRt, resetPasswordPengguna, setStatusPengguna, simpanJenisSampah, updateHargaSampah, setor, tarik, koreksi, sesuaikanSaldo |
 | `server/api/real-actions.ts` | Objek `realActions: Actions` untuk saklar frontend (tanpa `server-only`, boleh diimpor Client Component) |
 | `server/api/queries.ts` | Query (`server-only`): getSesi, getProfilSaya, cariNasabah, getNasabah, listJenisSampah, listRiwayatHarga, listStaf, listPengguna, getHistori, getTransaksi, auditTransaksi + objek `realQueries: Queries` |
 | `server/api/conformance.ts` | Pemeriksaan tipe `Queries`/`Actions` (tsc saja) |
@@ -88,6 +88,8 @@ Secret GitHub Actions (hanya workflow backup): `SUPABASE_DB_URL` (owner, 5432) d
    9. `20261009033635_peaceful_shen` — (branch Kaywam) tabel `price_history`
    10. `20261009070504_cooing_argent` — (branch Kaywam) kolom `waste_types.harga_jual`
    11. `20261014013750_price_history_akses` — GRANT SELECT/INSERT + RLS `price_history` untuk app_server
+   12. `20261014023416_penyesuaian_skema` — tipe transaksi `penyesuaian` + CHECK (alasan wajib, tanpa foto/reverses_id)
+   13. `20261014023437_penyesuaian_fungsi` — fungsi SQL `penyesuaian` (EXECUTE hanya app_server)
    Migration pertama ke Supabase membekukan riwayat: setelah itu perubahan hanya lewat migration BARU.
 2. Set password `app_server` (tidak ada di migration): konek sebagai `postgres` dengan psql lalu
    `\password app_server`, isi `DATABASE_URL` dengan username `app_server.<project-ref>`.
@@ -151,6 +153,13 @@ dan tes.
   `KREDENSIAL_SALAH` dengan waktu respons setara.
 - **Nasabah nonaktif boleh ditarik** (sisa saldo hak nasabah); setor tetap wajib aktif.
 - **Koreksi hanya super_admin** (Fase 1), dicek di guard DAN di fungsi SQL.
+- **Penyesuaian saldo** (`sesuaikanSaldo`, admin & super_admin): saldo TIDAK diubah langsung;
+  dicatat sebagai transaksi `penyesuaian` bertanda (+/-) dengan alasan wajib, lewat fungsi SQL
+  `penyesuaian` (kunci baris nasabah seperti tarik). Penyesuaian negatif yang membuat saldo minus
+  -> `SALDO_TIDAK_CUKUP`. Maks Rp100.000.000 per penyesuaian. Bisa dibalik super_admin lewat
+  koreksi. Nasabah nonaktif tetap boleh disesuaikan.
+- **Nama pengguna**: 3-40 karakter (huruf, angka, spasi, `.`, `'`), tanpa kata di
+  `KATA_TERLARANG` (dicocokkan per kata utuh, termasuk leet-speak & huruf dipisah).
 - Saldo tidak pernah minus; ledger append-only (UPDATE/DELETE/TRUNCATE ditolak trigger).
 - `clientRequestId` sama → transaksi asli dikembalikan dengan `duplikat: true`, file foto
   kedua dihapus. UUID yang sama dipakai untuk operasi lain → `VALIDASI_GAGAL`.

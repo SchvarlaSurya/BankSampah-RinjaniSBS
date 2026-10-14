@@ -26,7 +26,8 @@ import { z } from "zod";
  *               Jangan di-Number(): id bisa melewati batas aman JS.
  * - UserId    : id user (Better Auth) berupa string.
  * - Rupiah    : integer (number). Tidak ada desimal. Tanda +/- hanya pada
- *               TransaksiRingkas.jumlah (setor +, tarik -, koreksi = kebalikan asli).
+ *               TransaksiRingkas.jumlah (setor +, tarik -, koreksi = kebalikan asli,
+ *               penyesuaian = + atau - sesuai input) dan PenyesuaianInput.jumlah.
  * - BeratStr  : string desimal SELALU 2 angka di belakang titik, "12.50".
  *               Jangan diubah ke float untuk dihitung uangnya.
  * - IsoUtc    : string ISO-8601 UTC, "2026-09-30T12:21:08.000Z".
@@ -44,7 +45,7 @@ export type IsoUtc = string;
 export const ROLES = ["super_admin", "admin", "nasabah"] as const;
 export type Role = (typeof ROLES)[number];
 
-export const TIPE_TRANSAKSI = ["setor", "tarik", "koreksi"] as const;
+export const TIPE_TRANSAKSI = ["setor", "tarik", "koreksi", "penyesuaian"] as const;
 export type TipeTransaksi = (typeof TIPE_TRANSAKSI)[number];
 
 export const LIMIT = {
@@ -422,6 +423,23 @@ export const KoreksiInputSchema = z.object({
   clientRequestId: uuid,
 });
 
+/**
+ * Penyesuaian saldo oleh admin/super_admin (misal saldo awal dari pencatatan manual, salah
+ * hitung di luar sistem). Bukan "ubah angka saldo": ledger tetap append-only, penyesuaian
+ * dicatat sebagai transaksi baru yang bisa diaudit dan dikoreksi.
+ */
+export const PenyesuaianInputSchema = z.object({
+  customerId: userId,
+  /** BERTANDA: positif menambah saldo, negatif mengurangi. Tidak boleh 0. */
+  jumlah: z
+    .number()
+    .int("Harus bilangan bulat")
+    .refine((v) => v !== 0, "Tidak boleh 0")
+    .refine((v) => Math.abs(v) <= LIMIT.MAKS_TARIK_RUPIAH, `Maksimal Rp${LIMIT.MAKS_TARIK_RUPIAH.toLocaleString("id-ID")}`),
+  alasan: z.string().trim().min(LIMIT.ALASAN_MIN, `Minimal ${LIMIT.ALASAN_MIN} karakter`).max(LIMIT.ALASAN_MAKS),
+  clientRequestId: uuid,
+});
+
 export const HistoriInputSchema = z.object({
   customerId: userId,
   cursor: idStr.optional(),
@@ -455,6 +473,7 @@ export type SimpanJenisSampahInput = z.input<typeof SimpanJenisSampahInputSchema
 export type SetorInput = z.input<typeof SetorInputSchema>;
 export type TarikInput = z.input<typeof TarikInputSchema>;
 export type KoreksiInput = z.input<typeof KoreksiInputSchema>;
+export type PenyesuaianInput = z.input<typeof PenyesuaianInputSchema>;
 export type HistoriInput = z.input<typeof HistoriInputSchema>;
 export type AuditInput = z.input<typeof AuditInputSchema>;
 export type GetTransaksiInput = z.input<typeof GetTransaksiInputSchema>;
@@ -584,7 +603,7 @@ export interface TransaksiRingkas {
   /** Bertanda: setor +, tarik -, koreksi = kebalikan transaksi asli. */
   jumlah: Rupiah;
   waktu: IsoUtc;
-  catatan: string | null; // untuk koreksi = alasan
+  catatan: string | null; // untuk koreksi & penyesuaian = alasan
   dibuatOlehNama: string;
   /** true bila transaksi ini sudah dibalik oleh sebuah koreksi. */
   sudahDibalik: boolean;
@@ -690,6 +709,8 @@ export interface Actions {
   tarik(input: TarikInput): Promise<ActionResult<MutasiResult>>;
   /** super_admin saja (Fase 1). */
   koreksi(input: KoreksiInput): Promise<ActionResult<MutasiResult>>;
+  /** admin, super_admin. Tambah (+) / kurangi (-) saldo nasabah dengan alasan; saldo tidak boleh minus. */
+  sesuaikanSaldo(input: PenyesuaianInput): Promise<ActionResult<MutasiResult>>;
 }
 
 /**
@@ -720,6 +741,7 @@ export const AKSES: Record<keyof Queries | keyof Actions, readonly Role[]> = {
   setor: ["admin", "super_admin"],
   tarik: ["admin", "super_admin"],
   koreksi: ["super_admin"],
+  sesuaikanSaldo: ["admin", "super_admin"],
 };
 
 /**

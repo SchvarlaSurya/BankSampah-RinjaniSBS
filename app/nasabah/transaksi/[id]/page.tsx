@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { queries } from "@/lib/api/queries";
 import { formatRupiah, redirectUntukError } from "@/contract";
-import { ArrowLeft, ArrowDownLeft, ArrowUpRight, RotateCcw, Calendar, Scale } from "lucide-react";
+import { ArrowLeft, ArrowDownLeft, ArrowUpRight, RotateCcw, Calendar, Scale, SlidersHorizontal } from "lucide-react";
 
 export default async function NasabahTransaksiDetailPage({
   params,
@@ -58,6 +58,7 @@ export default async function NasabahTransaksiDetailPage({
               {tx.tipe === "setor" && <ArrowDownLeft className="w-6 h-6" />}
               {tx.tipe === "tarik" && <ArrowUpRight className="w-6 h-6" />}
               {tx.tipe === "koreksi" && <RotateCcw className="w-6 h-6" />}
+              {tx.tipe === "penyesuaian" && <SlidersHorizontal className="w-6 h-6" />}
             </div>
             <div>
               <h1 className="text-xl font-bold text-white capitalize">

@@ -20,6 +20,7 @@ import type {
   KoreksiInput,
   LoginInput,
   MutasiResult,
+  PenyesuaianInput,
   NasabahRingkas,
   PenggunaBaruResult,
   PenggunaRingkas,
@@ -51,6 +52,7 @@ import {
   SetorInputSchema,
   TarikInputSchema,
   KoreksiInputSchema,
+  PenyesuaianInputSchema,
 } from "@/contract";
 import { store, nextId, nowIso } from "./_store";
 
@@ -470,4 +472,44 @@ export async function koreksi(input: KoreksiInput): Promise<ActionResult<MutasiR
     saldoBaru: nasabah.saldo,
     duplikat: false,
   });
+}
+
+export async function sesuaikanSaldo(input: PenyesuaianInput): Promise<ActionResult<MutasiResult>> {
+  await delay();
+  const sesi = store.sesi;
+  if (!sesi) return fail("TIDAK_LOGIN");
+  if (sesi.role === "nasabah") return fail("TIDAK_DIIZINKAN");
+
+  const parsed = PenyesuaianInputSchema.safeParse(input);
+  if (!parsed.success) return failDariZod(parsed.error);
+
+  const duplikat = hasilDuplikat(parsed.data.clientRequestId);
+  if (duplikat) return duplikat;
+
+  const nasabah = store.nasabah.find((n) => n.id === parsed.data.customerId);
+  if (!nasabah) return fail("NASABAH_TIDAK_DITEMUKAN");
+  if (nasabah.saldo + parsed.data.jumlah < 0) return fail("SALDO_TIDAK_CUKUP");
+
+  const newTransaksi: TransaksiDetail = {
+    id: nextId(),
+    tipe: "penyesuaian",
+    jumlah: parsed.data.jumlah,
+    waktu: nowIso(),
+    catatan: parsed.data.alasan,
+    dibuatOlehId: sesi.userId,
+    dibuatOlehNama: sesi.nama,
+    customerId: nasabah.id,
+    customerNama: nasabah.nama,
+    customerUsername: nasabah.username,
+    items: [],
+    fotoUrl: null,
+    fotoUrlBerlakuHingga: null,
+    sudahDibalik: false,
+    membalikId: null,
+    dibalikOlehId: null,
+  };
+  store.transaksi.push(newTransaksi);
+  store.clientRequestIndex.set(parsed.data.clientRequestId, newTransaksi.id);
+  nasabah.saldo += parsed.data.jumlah;
+  return ok({ transaksi: newTransaksi, saldoBaru: nasabah.saldo, duplikat: false });
 }

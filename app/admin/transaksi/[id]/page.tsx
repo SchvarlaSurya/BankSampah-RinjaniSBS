@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
   AlertTriangle,
   Scale,
+  SlidersHorizontal,
 } from "lucide-react";
 import KoreksiDialog from "@/components/koreksi-dialog";
 
@@ -73,6 +74,7 @@ export default async function TransaksiDetailPage({
               {tx.tipe === "setor" && <ArrowDownLeft className="w-6 h-6" />}
               {tx.tipe === "tarik" && <ArrowUpRight className="w-6 h-6" />}
               {tx.tipe === "koreksi" && <RotateCcw className="w-6 h-6" />}
+              {tx.tipe === "penyesuaian" && <SlidersHorizontal className="w-6 h-6" />}
             </div>
             <div>
               <div className="flex items-center gap-2">

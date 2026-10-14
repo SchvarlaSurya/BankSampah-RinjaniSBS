@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   User,
   AlertCircle,
+  SlidersHorizontal,
 } from "lucide-react";
 import { GantiPasswordModal } from "./GantiPasswordModal";
 
@@ -147,6 +148,7 @@ export default async function NasabahDashboardPage({
                       {isSetor && <ArrowDownLeft className="w-4 h-4" />}
                       {isTarik && <ArrowUpRight className="w-4 h-4" />}
                       {isKoreksi && <RotateCcw className="w-4 h-4" />}
+                      {tx.tipe === "penyesuaian" && <SlidersHorizontal className="w-4 h-4" />}
                     </div>
 
                     <div className="min-w-0">

@@ -23,6 +23,7 @@ import {
   ChevronLeft,
   ExternalLink,
   CalendarDays,
+  SlidersHorizontal,
 } from "lucide-react";
 
 export interface FilterAudit {
@@ -251,6 +252,7 @@ export function AuditView({
                         {isSetor && <ArrowDownLeft className="w-4 h-4" />}
                         {isTarik && <ArrowUpRight className="w-4 h-4" />}
                         {isKoreksi && <RotateCcw className="w-4 h-4" />}
+                        {tx.tipe === "penyesuaian" && <SlidersHorizontal className="w-4 h-4" />}
                       </div>
                       <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 text-xs font-semibold capitalize">
                         {tx.tipe}

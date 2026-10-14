@@ -16,6 +16,7 @@ import {
   login,
   logout,
   resetPasswordPengguna,
+  sesuaikanSaldo,
   setor,
   setStatusPengguna,
   simpanJenisSampah,
@@ -36,4 +37,5 @@ export const mockActions: Actions = {
   setor,
   tarik,
   koreksi,
+  sesuaikanSaldo,
 };

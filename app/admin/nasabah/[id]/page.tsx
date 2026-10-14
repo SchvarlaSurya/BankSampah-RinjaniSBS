@@ -14,6 +14,7 @@ import {
   UserX,
   ChevronLeft,
   AlertCircle,
+  SlidersHorizontal,
 } from "lucide-react";
 import ResetPasswordDialog from "@/components/ResetPasswordDialog";
 
@@ -141,6 +142,14 @@ export default async function AdminNasabahDetailPage({
             <ArrowUpRight className="w-5 h-5 text-amber-400 group-hover:scale-110 transition-transform" />
             <span>Penarikan Saldo Tunai</span>
           </Link>
+
+          <Link
+            href={`/admin/nasabah/${nasabah.id}/penyesuaian`}
+            className="sm:col-span-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-semibold text-sm rounded-2xl py-3 px-6 transition-all flex items-center justify-center gap-2 group"
+          >
+            <SlidersHorizontal className="w-5 h-5 text-sky-400 group-hover:scale-110 transition-transform" />
+            <span>Penyesuaian Saldo</span>
+          </Link>
         </div>
       </div>
 
@@ -196,6 +205,7 @@ export default async function AdminNasabahDetailPage({
                       {isSetor && <ArrowDownLeft className="w-4 h-4" />}
                       {isTarik && <ArrowUpRight className="w-4 h-4" />}
                       {isKoreksi && <RotateCcw className="w-4 h-4" />}
+                      {tx.tipe === "penyesuaian" && <SlidersHorizontal className="w-4 h-4" />}
                     </div>
 
                     <div className="min-w-0">

@@ -39,6 +39,8 @@ import {
   type LatestIdByRtResult,
   type TarikInput,
   TarikInputSchema,
+  type PenyesuaianInput,
+  PenyesuaianInputSchema,
 } from "@/contract";
 import { idKeNumber } from "../angka";
 import { auth } from "../auth";
@@ -399,6 +401,25 @@ export async function tarik(input: TarikInput): Promise<ActionResult<MutasiResul
         )`);
     } catch (e) {
       return kodeLedger("tarik", e);
+    }
+    return hasilMutasi(hasil, sesi);
+  });
+}
+
+/** Penyesuaian saldo (+/-) dengan alasan: transaksi baru lewat fungsi SQL penyesuaian. */
+export async function sesuaikanSaldo(input: PenyesuaianInput): Promise<ActionResult<MutasiResult>> {
+  return jalankan("sesuaikanSaldo", async (sesi) => {
+    const parsed = PenyesuaianInputSchema.safeParse(input);
+    if (!parsed.success) return failDariZod(parsed.error);
+    const { customerId, jumlah, alasan, clientRequestId } = parsed.data;
+    let hasil;
+    try {
+      hasil = await panggilLedger(sql`
+        select * from public.penyesuaian(
+          ${customerId}, ${sesi.userId}, ${clientRequestId}::uuid, ${jumlah}::integer, ${alasan}
+        )`);
+    } catch (e) {
+      return kodeLedger("sesuaikanSaldo", e);
     }
     return hasilMutasi(hasil, sesi);
   });
