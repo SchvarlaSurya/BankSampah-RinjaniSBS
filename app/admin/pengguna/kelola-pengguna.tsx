@@ -14,12 +14,8 @@ import {
   UserCheck,
   UserX,
   Loader2,
-  AlertCircle,
   CheckCircle2,
-  Sparkles,
   RefreshCw,
-  Building2,
-  Hash,
   Copy,
   Check,
   Search,
@@ -27,6 +23,12 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader } from "@/components/ui/card";
+import { Field, Input, Select } from "@/components/ui/field";
+import { Alert, EmptyState } from "@/components/ui/feedback";
+import { PageHeader } from "@/components/ui/page";
 import ResetPasswordDialog from "@/components/ResetPasswordDialog";
 
 export const RT_OPTIONS = [
@@ -245,308 +247,284 @@ export function KelolaPengguna({
   const endRow = dataHalaman ? Math.min(dataHalaman.offset + dataHalaman.items.length, dataHalaman.total) : 0;
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
-      {/* Header Card */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/40 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-3 shadow-xl">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-          <Users className="w-3.5 h-3.5" />
-          <span>{isSuperAdmin ? "Super Admin Access" : "Admin Dashboard"}</span>
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-          Kelola Pengguna & Registrasi Nasabah
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-          Pendaftaran nasabah baru dengan auto-ID berbasis RT, pencarian, penyaringan kriteria pengguna, serta manajemen akun & password sementara.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader description="Pendaftaran nasabah baru dengan ID otomatis berbasis RT, pencarian dan penyaringan pengguna, serta pengelolaan akun dan password sementara." />
 
       {formErrorMessage && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs sm:text-sm flex items-center justify-between gap-3 shadow-md animate-in fade-in">
-          <div className="flex items-center gap-2.5">
-            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
-            <span>{formErrorMessage}</span>
-          </div>
-          <button
-            onClick={() => setFormErrorMessage(null)}
-            className="text-rose-400 hover:text-rose-200 text-xs underline shrink-0"
-          >
-            Tutup
-          </button>
-        </div>
+        <Alert
+          tone="danger"
+          action={
+            <button
+              type="button"
+              onClick={() => setFormErrorMessage(null)}
+              className="text-sm font-medium underline underline-offset-2"
+            >
+              Tutup
+            </button>
+          }
+        >
+          {formErrorMessage}
+        </Alert>
       )}
 
       {/* Buat Pengguna Form */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 space-y-5 shadow-xl">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <UserPlus className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-100">
-                {newRole === "nasabah" ? "Registrasi Nasabah Baru" : "Buat Akun Staf Admin"}
-              </h2>
-              <p className="text-xs text-slate-400">
-                {newRole === "nasabah"
-                  ? "ID Nasabah & Password awal ter-generate otomatis berdasarkan nomor RT."
-                  : "Buat akun petugas operasional bank sampah."}
+      <Card>
+        <CardHeader
+          title={
+            <span className="flex items-center gap-2">
+              <UserPlus className="size-4 text-ink-muted" aria-hidden="true" />
+              {newRole === "nasabah" ? "Registrasi nasabah baru" : "Buat akun staf admin"}
+            </span>
+          }
+          description={
+            newRole === "nasabah"
+              ? "ID Nasabah & Password awal ter-generate otomatis berdasarkan nomor RT."
+              : "Buat akun petugas operasional bank sampah."
+          }
+        />
+
+        <div className="space-y-5 p-5">
+          {createResult && (
+            <div className="space-y-4 rounded-control bg-success-bg p-4 ring-1 ring-success-fg/15 ring-inset" role="status">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="flex items-center gap-2 font-semibold text-success-fg">
+                  <CheckCircle2 className="size-5" aria-hidden="true" />
+                  Akun berhasil didaftarkan
+                </span>
+                <Button variant="secondary" onClick={handleCopyCredentials}>
+                  {copied ? <Check /> : <Copy />}
+                  <span>{copied ? "Tersalin" : "Salin info akun"}</span>
+                </Button>
+              </div>
+
+              <dl className="grid gap-px overflow-hidden rounded-control bg-line ring-1 ring-line sm:grid-cols-3">
+                <div className="bg-surface px-3.5 py-2.5">
+                  <dt className="text-xs text-ink-muted">Nama lengkap</dt>
+                  <dd className="font-medium text-ink">{createResult.nama}</dd>
+                </div>
+                <div className="bg-surface px-3.5 py-2.5">
+                  <dt className="text-xs text-ink-muted">ID / Username</dt>
+                  <dd className="font-semibold text-ink tabular-nums slashed-zero">{createResult.username}</dd>
+                </div>
+                <div className="bg-surface px-3.5 py-2.5">
+                  <dt className="text-xs text-ink-muted">Password awal</dt>
+                  <dd className="font-semibold tracking-wide text-ink tabular-nums slashed-zero select-all">
+                    {createResult.passwordSementara}
+                  </dd>
+                </div>
+              </dl>
+
+              <p className="text-sm text-success-fg">
+                Berikan ID Nasabah & Password awal di atas kepada nasabah. Pengguna akan diarahkan mengganti password saat pertama kali masuk.
               </p>
             </div>
-          </div>
-        </div>
+          )}
 
-        {createResult && (
-          <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-950/60 to-slate-900 border border-emerald-500/30 text-emerald-200 text-xs space-y-3 shadow-lg animate-in zoom-in-95">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-sm flex items-center gap-2 text-emerald-300">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                Akun Berhasil Didaftarkan!
-              </span>
-              <button
-                type="button"
-                onClick={handleCopyCredentials}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-semibold transition-colors border border-emerald-500/30"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? "Tersalin!" : "Salin Info Akun"}</span>
-              </button>
-            </div>
+          <form onSubmit={handleBuatPengguna} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              {/* Role Switcher */}
+              <Field label="Jenis pengguna" htmlFor="pengguna-role" required>
+                <Select
+                  id="pengguna-role"
+                  value={newRole}
+                  onChange={(e) => handleRoleChange(e.target.value as "admin" | "nasabah")}
+                >
+                  <option value="nasabah">Nasabah (Warga / Penyetor)</option>
+                  {isSuperAdmin && <option value="admin">Admin (Petugas)</option>}
+                </Select>
+              </Field>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-slate-300">
-              <div className="bg-slate-950/90 p-2.5 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider block mb-0.5">Nama Lengkap</span>
-                <span className="font-bold text-slate-100 text-xs">{createResult.nama}</span>
-              </div>
-              <div className="bg-slate-950/90 p-2.5 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider block mb-0.5">ID / Username</span>
-                <span className="font-mono font-bold text-emerald-400 text-xs">{createResult.username}</span>
-              </div>
-              <div className="bg-slate-950/90 p-2.5 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider block mb-0.5">Password Awal</span>
-                <span className="font-mono font-bold text-amber-400 text-xs">{createResult.passwordSementara}</span>
-              </div>
-            </div>
+              {/* RT Dropdown (Tampil saat role = nasabah) */}
+              {newRole === "nasabah" ? (
+                <Field label="Wilayah RT" htmlFor={isCustomRt ? "pengguna-rt-lain" : "pengguna-rt"} required>
+                  {isCustomRt ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="pengguna-rt-lain"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="contoh: 07"
+                        value={customRt}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                          setCustomRt(val);
+                          if (val) fetchNextIdForRt(val);
+                        }}
+                        className="tabular-nums"
+                      />
+                      <Button
+                        variant="secondary"
+                        onClick={() => setIsCustomRt(false)}
+                        className="h-11 shrink-0"
+                        title="Kembali ke dropdown"
+                      >
+                        Batal
+                      </Button>
+                    </div>
+                  ) : (
+                    <Select
+                      id="pengguna-rt"
+                      value={selectedRt}
+                      onChange={(e) => handleRtSelectChange(e.target.value)}
+                    >
+                      {RT_OPTIONS.map((rt) => (
+                        <option key={rt.id} value={rt.id}>
+                          {rt.label} ({rt.id})
+                        </option>
+                      ))}
+                      <option value="custom">+ Input RT Lainnya</option>
+                    </Select>
+                  )}
+                </Field>
+              ) : null}
 
-            <p className="text-[11px] text-slate-400 italic">
-              *Berikan ID Nasabah & Password awal di atas kepada nasabah. Pengguna akan diarahkan mengganti password saat pertama kali masuk.
-            </p>
-          </div>
-        )}
-
-        <form onSubmit={handleBuatPengguna} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-            {/* Role Switcher */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Jenis Pengguna <span className="text-rose-400">*</span>
-              </label>
-              <select
-                value={newRole}
-                onChange={(e) => handleRoleChange(e.target.value as "admin" | "nasabah")}
-                className="w-full bg-slate-950 border border-slate-800 text-slate-100 text-xs rounded-xl p-3 outline-none focus:border-emerald-500 transition-colors"
-              >
-                <option value="nasabah">Nasabah (Warga / Penyetor)</option>
-                {isSuperAdmin && <option value="admin">Admin (Petugas)</option>}
-              </select>
-            </div>
-
-            {/* RT Dropdown (Tampil saat role = nasabah) */}
-            {newRole === "nasabah" ? (
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Pilih Wilayah RT</span> <span className="text-rose-400">*</span>
-                </label>
-                {isCustomRt ? (
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="text"
-                      placeholder="contoh: 07"
-                      value={customRt}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/\D/g, "").slice(0, 4);
-                        setCustomRt(val);
-                        if (val) fetchNextIdForRt(val);
-                      }}
-                      className="w-full bg-slate-950 border border-slate-800 text-slate-100 font-mono text-xs rounded-xl p-3 outline-none focus:border-emerald-500"
-                    />
+              {/* Username / ID Nasabah Field */}
+              <div className={newRole === "nasabah" ? "space-y-1.5" : "space-y-1.5 sm:col-span-2"}>
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="pengguna-username" className="block text-sm font-medium text-ink">
+                    {newRole === "nasabah" ? "ID Nasabah (otomatis)" : "Username staf"}
+                    <span className="ml-0.5 text-danger-fg" aria-hidden="true">*</span>
+                  </label>
+                  {newRole === "nasabah" && (
                     <button
                       type="button"
-                      onClick={() => setIsCustomRt(false)}
-                      className="px-2.5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs"
-                      title="Kembali ke dropdown"
+                      onClick={() => {
+                        const targetRt = isCustomRt ? customRt : selectedRt;
+                        if (targetRt) fetchNextIdForRt(targetRt);
+                      }}
+                      disabled={generatingId}
+                      className="inline-flex items-center gap-1 rounded-control px-1.5 py-0.5 text-xs font-medium text-brand hover:bg-brand-soft hover:text-brand-hover disabled:opacity-60"
+                      title="Generate ulang ID"
                     >
-                      Batal
+                      <RefreshCw className={`size-3.5 ${generatingId ? "animate-spin" : ""}`} aria-hidden="true" />
+                      <span>Auto-ID</span>
                     </button>
-                  </div>
-                ) : (
-                  <select
-                    value={selectedRt}
-                    onChange={(e) => handleRtSelectChange(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 text-slate-100 text-xs rounded-xl p-3 outline-none focus:border-emerald-500 transition-colors cursor-pointer"
-                  >
-                    {RT_OPTIONS.map((rt) => (
-                      <option key={rt.id} value={rt.id}>
-                        {rt.label} ({rt.id})
-                      </option>
-                    ))}
-                    <option value="custom">+ Input RT Lainnya</option>
-                  </select>
-                )}
-              </div>
-            ) : null}
-
-            {/* Username / ID Nasabah Field */}
-            <div className={newRole === "nasabah" ? "" : "sm:col-span-2"}>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <Hash className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>{newRole === "nasabah" ? "ID Nasabah (Auto)" : "Username Staf"}</span>
-                  <span className="text-rose-400">*</span>
-                </label>
-                {newRole === "nasabah" && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const targetRt = isCustomRt ? customRt : selectedRt;
-                      if (targetRt) fetchNextIdForRt(targetRt);
-                    }}
-                    disabled={generatingId}
-                    className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
-                    title="Generate ulang ID"
-                  >
-                    <RefreshCw className={`w-3 h-3 ${generatingId ? "animate-spin" : ""}`} />
-                    <span>Auto-ID</span>
-                  </button>
-                )}
-              </div>
-              <div className="relative">
-                <input
-                  type="text"
-                  required
-                  placeholder={newRole === "nasabah" ? "contoh: 0101" : "contoh: admin02"}
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 font-mono text-xs rounded-xl p-3 outline-none focus:border-emerald-500 transition-colors"
-                />
-                {generatingId && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  </div>
-                )}
+                  )}
+                </div>
+                <div className="relative">
+                  <Input
+                    id="pengguna-username"
+                    type="text"
+                    required
+                    placeholder={newRole === "nasabah" ? "contoh: 0101" : "contoh: admin02"}
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    className="pr-10 tabular-nums"
+                  />
+                  {generatingId && (
+                    <div className="absolute top-1/2 right-3 -translate-y-1/2 text-ink-muted">
+                      <Loader2 className="size-4 animate-spin" aria-label="Membuat ID" />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Nama Lengkap Field */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Nama Lengkap Nasabah / Staf <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="contoh: Ibu Sri Rahayu"
-              maxLength={40}
-              value={newNama}
-              onChange={(e) => setNewNama(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 text-slate-100 text-xs rounded-xl p-3 outline-none focus:border-emerald-500 transition-colors"
-            />
-          </div>
+            {/* Nama Lengkap Field */}
+            <Field label="Nama lengkap nasabah / staf" htmlFor="pengguna-nama" required>
+              <Input
+                id="pengguna-nama"
+                type="text"
+                required
+                placeholder="contoh: Ibu Sri Rahayu"
+                maxLength={40}
+                value={newNama}
+                onChange={(e) => setNewNama(e.target.value)}
+              />
+            </Field>
 
-          {/* Helper info for Nasabah */}
-          {newRole === "nasabah" && newUsername && (
-            <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800/80 flex items-center justify-between gap-3 text-[11px] text-slate-400">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+            {/* Helper info for Nasabah */}
+            {newRole === "nasabah" && newUsername && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-surface-muted px-4 py-3 text-sm text-ink-muted ring-1 ring-line ring-inset">
                 <span>
-                  ID Nasabah: <strong className="text-emerald-400 font-mono">{newUsername}</strong> &bull; Password Awal: <strong className="text-amber-400 font-mono">{newUsername}</strong>
+                  ID Nasabah: <strong className="font-semibold text-ink tabular-nums">{newUsername}</strong> · Password awal:{" "}
+                  <strong className="font-semibold text-ink tabular-nums">{newUsername}</strong>
                 </span>
+                <span className="hidden text-xs sm:inline">Format: RT (2 digit) + No. Urut</span>
               </div>
-              <span className="text-slate-400 hidden sm:inline">Format: RT (2 digit) + No. Urut</span>
-            </div>
-          )}
+            )}
 
-          <div className="pt-2">
-            <button
-              type="submit"
-              className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm rounded-xl py-3 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>{newRole === "nasabah" ? "Daftarkan Nasabah Baru" : "Buat Akun Staf"}</span>
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* Tabel & Toolbar Pengguna Terpadu */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 space-y-6 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
-          <div>
-            <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
-              <Users className="w-5 h-5 text-emerald-400" />
-              <span>Daftar Pengguna Sistem</span>
-            </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {isSuperAdmin
-                ? "Pencarian & manajemen seluruh pengguna (Nasabah, Admin Basic, & Super Admin)."
-                : "Pencarian & manajemen daftar nasabah bank sampah."}
-            </p>
-          </div>
-
-          {(urlSearch || urlRole || urlRt || urlStatus) && (
-            <button
-              onClick={handleResetFilters}
-              className="inline-flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 font-semibold px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 self-start sm:self-auto transition-colors"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset Filter</span>
-            </button>
-          )}
+            <Button type="submit" size="lg" className="w-full">
+              <UserPlus />
+              <span>{newRole === "nasabah" ? "Daftarkan nasabah baru" : "Buat akun staf"}</span>
+            </Button>
+          </form>
         </div>
+      </Card>
+
+      {/* Daftar Pengguna */}
+      <Card>
+        <CardHeader
+          title={
+            <span className="flex items-center gap-2">
+              <Users className="size-4 text-ink-muted" aria-hidden="true" />
+              Daftar pengguna
+            </span>
+          }
+          description={
+            isSuperAdmin
+              ? "Pencarian & manajemen seluruh pengguna (Nasabah, Admin Basic, & Super Admin)."
+              : "Pencarian & manajemen daftar nasabah bank sampah."
+          }
+          actions={
+            (urlSearch || urlRole || urlRt || urlStatus) && (
+              <Button variant="secondary" onClick={handleResetFilters}>
+                <RotateCcw />
+                <span>Reset filter</span>
+              </Button>
+            )
+          }
+        />
 
         {/* Toolbar Filter */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* Input Search */}
+        <div className="grid gap-3 border-b border-line p-5 sm:grid-cols-2 lg:grid-cols-4">
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Cari nama, ID, RT..."
+            <label htmlFor="filter-cari" className="sr-only">
+              Cari pengguna
+            </label>
+            <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-ink-subtle" aria-hidden="true" />
+            <Input
+              id="filter-cari"
+              type="search"
+              placeholder="Cari nama, ID, RT…"
               value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 text-slate-100 text-xs rounded-xl pl-9 pr-3 py-2.5 outline-none focus:border-emerald-500 transition-colors"
+              className="pl-10"
             />
           </div>
 
           {/* Filter Role (Super Admin Only) */}
           {isSuperAdmin ? (
             <div>
-              <select
+              <label htmlFor="filter-role" className="sr-only">
+                Filter role
+              </label>
+              <Select
+                id="filter-role"
                 value={urlRole}
                 onChange={(e) => updateUrlParams({ role: e.target.value, page: 1 })}
-                className="w-full bg-slate-950 border border-slate-800 text-slate-100 text-xs rounded-xl px-3 py-2.5 outline-none focus:border-emerald-500 transition-colors cursor-pointer"
               >
                 <option value="">Semua Role</option>
                 <option value="nasabah">Nasabah</option>
                 <option value="admin">Admin Basic</option>
                 <option value="super_admin">Super Admin</option>
-              </select>
+              </Select>
             </div>
           ) : (
-            <div>
-              <div className="w-full bg-slate-950/60 border border-slate-800/80 text-slate-400 text-xs rounded-xl px-3 py-2.5">
-                Role: Nasabah
-              </div>
+            <div className="flex h-11 items-center rounded-control bg-surface-muted px-3.5 text-sm text-ink-muted ring-1 ring-line ring-inset">
+              Role: Nasabah
             </div>
           )}
 
           {/* Filter RT */}
           <div>
-            <select
+            <label htmlFor="filter-rt" className="sr-only">
+              Filter RT
+            </label>
+            <Select
+              id="filter-rt"
               value={urlRt}
               onChange={(e) => updateUrlParams({ rt: e.target.value, page: 1 })}
-              className="w-full bg-slate-950 border border-slate-800 text-slate-100 text-xs rounded-xl px-3 py-2.5 outline-none focus:border-emerald-500 transition-colors cursor-pointer"
             >
               <option value="">Semua RT</option>
               {RT_OPTIONS.map((rt) => (
@@ -554,208 +532,164 @@ export function KelolaPengguna({
                   {rt.label} ({rt.id})
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           {/* Filter Status */}
           <div>
-            <select
+            <label htmlFor="filter-status" className="sr-only">
+              Filter status
+            </label>
+            <Select
+              id="filter-status"
               value={urlStatus}
               onChange={(e) => updateUrlParams({ status: e.target.value, page: 1 })}
-              className="w-full bg-slate-950 border border-slate-800 text-slate-100 text-xs rounded-xl px-3 py-2.5 outline-none focus:border-emerald-500 transition-colors cursor-pointer"
             >
               <option value="">Semua Status</option>
               <option value="aktif">Aktif</option>
               <option value="nonaktif">Nonaktif / Suspended</option>
-            </select>
+            </Select>
           </div>
         </div>
 
-        {/* Tabel Result */}
         {tableError && (
-          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{tableError}</span>
+          <div className="border-b border-line p-5">
+            <Alert tone="danger">{tableError}</Alert>
           </div>
         )}
 
-        <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950 text-slate-400 text-[11px] uppercase tracking-wider border-b border-slate-800">
-              <tr>
-                <th className="px-4 py-3">ID / Username</th>
-                <th className="px-4 py-3">Nama Lengkap</th>
-                <th className="px-4 py-3">Role</th>
-                <th className="px-4 py-3">RT</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {isPending ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500">
-                    <div className="inline-flex items-center gap-2 text-xs">
-                      <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
-                      <span>Memuat data pengguna...</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : !dataHalaman || dataHalaman.items.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <UserX className="w-8 h-8 text-slate-600" />
-                      <p className="font-semibold text-slate-400">Tidak ada pengguna ditemukan</p>
-                      <p className="text-[11px] text-slate-500">
-                        Coba ubah kata kunci pencarian atau bersihkan filter kriteria.
+        {/* Daftar baris */}
+        {isPending ? (
+          <div className="flex items-center justify-center gap-2 py-12 text-sm text-ink-muted">
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            <span>Memuat data pengguna…</span>
+          </div>
+        ) : !dataHalaman || dataHalaman.items.length === 0 ? (
+          <EmptyState
+            icon={<UserX />}
+            title="Tidak ada pengguna ditemukan"
+            description="Coba ubah kata kunci pencarian atau bersihkan filter."
+          />
+        ) : (
+          <ul className="divide-y divide-line">
+            {dataHalaman.items.map((user) => {
+              const isTargetSuperAdmin = user.role === "super_admin";
+              const isSelf = user.id === sesi?.userId;
+
+              return (
+                <li
+                  key={user.id}
+                  className="flex flex-col gap-3 px-5 py-3.5 transition-colors duration-150 hover:bg-brand-soft sm:flex-row sm:items-center sm:gap-4"
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-muted font-semibold text-ink ring-1 ring-line ring-inset">
+                      {user.nama.charAt(0).toUpperCase()}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-ink">{user.nama}</p>
+                      <p className="text-sm text-ink-muted">
+                        <span className="tabular-nums">{user.username}</span>
+                        {" · "}
+                        <span className="tabular-nums">{user.rt ? `RT ${user.rt}` : "-"}</span>
                       </p>
                     </div>
-                  </td>
-                </tr>
-              ) : (
-                dataHalaman.items.map((user) => {
-                  const isTargetSuperAdmin = user.role === "super_admin";
-                  const isSelf = user.id === sesi?.userId;
+                  </div>
 
-                  return (
-                    <tr key={user.id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="px-4 py-3.5 font-mono font-bold text-slate-200">
-                        {user.username}
-                      </td>
-                      <td className="px-4 py-3.5 font-semibold text-slate-100">
-                        {user.nama}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        {user.role === "super_admin" && (
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 border border-amber-500/20 text-amber-400">
-                            Super Admin
-                          </span>
-                        )}
-                        {user.role === "admin" && (
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-sky-500/10 border border-sky-500/20 text-sky-400">
-                            Admin Basic
-                          </span>
-                        )}
-                        {user.role === "nasabah" && (
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                            Nasabah
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5 font-mono text-slate-400">
-                        {user.rt ? `RT ${user.rt}` : "-"}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                            user.aktif
-                              ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
-                              : "bg-rose-500/10 border border-rose-500/20 text-rose-400"
-                          }`}
-                        >
-                          {user.aktif ? "Aktif" : "Nonaktif"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {/* Reset Password Button: Hanya untuk super_admin, pada akun non-super_admin dan bukan diri sendiri */}
-                          {isSuperAdmin && !isTargetSuperAdmin && !isSelf && (
-                            <ResetPasswordDialog
-                              userId={user.id}
-                              username={user.username}
-                              nama={user.nama}
-                              role={user.role}
-                            />
-                          )}
+                  <div className="flex flex-wrap items-center gap-2 pl-13 sm:pl-0">
+                    {user.role === "super_admin" && <Badge tone="warning">Super Admin</Badge>}
+                    {user.role === "admin" && <Badge tone="info">Admin Basic</Badge>}
+                    {user.role === "nasabah" && <Badge tone="brand">Nasabah</Badge>}
+                    <Badge tone={user.aktif ? "success" : "danger"}>{user.aktif ? "Aktif" : "Nonaktif"}</Badge>
+                  </div>
 
-                          {/* Toggle Status Button */}
-                          {isSuperAdmin && !isSelf && (
-                            <button
-                              onClick={() => handleToggleStatus(user.id, user.aktif)}
-                              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold inline-flex items-center gap-1 transition-colors ${
-                                user.aktif
-                                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-rose-500/10 hover:text-rose-400"
-                                  : "bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-emerald-500/10 hover:text-emerald-400"
-                              }`}
-                            >
-                              {user.aktif ? (
-                                <UserCheck className="w-3.5 h-3.5" />
-                              ) : (
-                                <UserX className="w-3.5 h-3.5" />
-                              )}
-                              <span className="hidden sm:inline">
-                                {user.aktif ? "Aktif" : "Nonaktif"}
-                              </span>
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                  {isSuperAdmin && !isSelf && (
+                    <div className="flex flex-wrap items-center gap-2 pl-13 sm:justify-end sm:pl-0">
+                      {/* Reset Password Button: Hanya untuk super_admin, pada akun non-super_admin dan bukan diri sendiri */}
+                      {!isTargetSuperAdmin && (
+                        <ResetPasswordDialog
+                          userId={user.id}
+                          username={user.username}
+                          nama={user.nama}
+                          role={user.role}
+                        />
+                      )}
+
+                      {/* Toggle Status Button */}
+                      <Button
+                        variant="secondary"
+                        onClick={() => handleToggleStatus(user.id, user.aktif)}
+                        aria-label={`${user.aktif ? "Nonaktifkan" : "Aktifkan"} ${user.nama}`}
+                      >
+                        {user.aktif ? <UserX /> : <UserCheck />}
+                        <span>{user.aktif ? "Nonaktifkan" : "Aktifkan"}</span>
+                      </Button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
         {/* Pagination Controls */}
         {dataHalaman && dataHalaman.total > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 text-xs text-slate-400">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-3 border-t border-line px-5 py-3 text-sm text-ink-muted sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-4">
               <span>
-                Menampilkan <strong className="text-slate-200">{startRow}</strong> -{" "}
-                <strong className="text-slate-200">{endRow}</strong> dari{" "}
-                <strong className="text-slate-200">{dataHalaman.total}</strong> pengguna
+                Menampilkan <strong className="font-semibold text-ink tabular-nums">{startRow}</strong>–
+                <strong className="font-semibold text-ink tabular-nums">{endRow}</strong> dari{" "}
+                <strong className="font-semibold text-ink tabular-nums">{dataHalaman.total}</strong> pengguna
               </span>
 
               {/* Baris per halaman selector */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] text-slate-500">Baris:</span>
-                <select
+              <div className="flex items-center gap-2">
+                <label htmlFor="filter-limit" className="text-xs">
+                  Baris
+                </label>
+                <Select
+                  id="filter-limit"
                   value={urlLimit}
                   onChange={(e) =>
                     updateUrlParams({ limit: parseInt(e.target.value, 10), page: 1 })
                   }
-                  className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-lg px-2 py-1 outline-none focus:border-emerald-500 cursor-pointer"
+                  className="h-10 w-20 tabular-nums"
                 >
                   <option value={10}>10</option>
                   <option value={20}>20</option>
                   <option value={50}>50</option>
                   <option value={100}>100</option>
-                </select>
+                </Select>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-[11px] text-slate-500">
+              <span className="text-xs tabular-nums">
                 Halaman {page} dari {totalPages}
               </span>
-
-              <div className="flex items-center gap-1">
-                <button
-                  disabled={page <= 1 || isPending}
-                  onClick={() => updateUrlParams({ page: page - 1 })}
-                  className="p-1.5 rounded-lg border border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  title="Halaman Sebelumnya"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-
-                <button
-                  disabled={page >= totalPages || isPending}
-                  onClick={() => updateUrlParams({ page: page + 1 })}
-                  className="p-1.5 rounded-lg border border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  title="Halaman Selanjutnya"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
+              <Button
+                variant="secondary"
+                size="icon"
+                disabled={page <= 1 || isPending}
+                onClick={() => updateUrlParams({ page: page - 1 })}
+                title="Halaman Sebelumnya"
+                aria-label="Halaman sebelumnya"
+              >
+                <ChevronLeft />
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                disabled={page >= totalPages || isPending}
+                onClick={() => updateUrlParams({ page: page + 1 })}
+                title="Halaman Selanjutnya"
+                aria-label="Halaman selanjutnya"
+              >
+                <ChevronRight />
+              </Button>
             </div>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
-
