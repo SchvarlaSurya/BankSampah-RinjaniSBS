@@ -1,0 +1,2 @@
+ALTER TABLE "waste_types" ADD COLUMN "harga_jual" integer;--> statement-breakpoint
+ALTER TABLE "waste_types" ADD CONSTRAINT "waste_types_harga_jual_positif" CHECK ("harga_jual" IS NULL OR "harga_jual" > 0);

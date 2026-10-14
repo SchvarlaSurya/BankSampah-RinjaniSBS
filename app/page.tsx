@@ -3,6 +3,8 @@ import { connection } from "next/server";
 import { queries } from "@/lib/api/queries";
 import { ROUTES } from "@/contract";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   await connection();
   const sesi = await queries.getSesi();
