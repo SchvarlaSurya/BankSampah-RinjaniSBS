@@ -20,6 +20,7 @@ import type {
   TransaksiDetail,
   SesiInfo,
 } from "@/contract";
+import dataJenisSampah from "@/data/jenis-sampah-2026-09.json";
 
 interface MockState {
   idSeq: number;
@@ -71,20 +72,27 @@ function buatState(): MockState {
     },
   ];
 
-  // Id jenis sampah & transaksi = IdStr (angka sebagai string), sama seperti backend.
-  const jenisSampah: JenisSampah[] = [
-    { id: "1" as IdStr, nama: "Kertas / Kardus", hargaBeli: 1500 as Rupiah, aktif: true },
-    { id: "2" as IdStr, nama: "Plastik PET (Botol)", hargaBeli: 2500 as Rupiah, aktif: true },
-    { id: "3" as IdStr, nama: "Aluminium / Kaleng", hargaBeli: 8000 as Rupiah, aktif: true },
-    { id: "4" as IdStr, nama: "Besi / Logam", hargaBeli: 3000 as Rupiah, aktif: true },
-    { id: "5" as IdStr, nama: "Kaca / Botol Kaca", hargaBeli: 500 as Rupiah, aktif: false },
-  ];
+  // Master jenis sampah dari Excel (sama dengan scripts/seed-jenis-sampah.ts: hanya satuan Kg).
+  // Id = IdStr (angka sebagai string), sama seperti backend.
+  const jenisSampah: JenisSampah[] = dataJenisSampah.jenisSampah
+    .filter((x) => x.satuan === "Kg")
+    .map((x, i) => ({
+      id: String(i + 1) as IdStr,
+      nama: x.nama,
+      hargaBeli: x.hargaSbs as Rupiah,
+      aktif: x.keterangan !== "Stop Sementara",
+    }));
+  const js = (nama: string) => {
+    const j = jenisSampah.find((x) => x.nama === nama);
+    if (!j) throw new Error(`mock: jenis sampah "${nama}" tidak ada di data`);
+    return { wasteTypeId: j.id, namaSampah: j.nama, hargaSnapshot: j.hargaBeli };
+  };
 
   const transaksi: TransaksiDetail[] = [
     {
       id: "1001" as IdStr,
       tipe: "setor",
-      jumlah: 15000 as Rupiah,
+      jumlah: 16000 as Rupiah,
       catatan: null,
       waktu: "2024-09-01T08:00:00.000Z",
       dibuatOlehId: "user-admin-1" as UserId,
@@ -93,13 +101,7 @@ function buatState(): MockState {
       customerNama: "Budi Santoso",
       customerUsername: "nasabah01",
       items: [
-        {
-          wasteTypeId: "1" as IdStr,
-          namaSampah: "Kertas / Kardus",
-          berat: "10.00",
-          hargaSnapshot: 1500 as Rupiah,
-          subtotal: 15000 as Rupiah,
-        },
+        { ...js("Kardus"), berat: "10.00", subtotal: 16000 as Rupiah },
       ],
       fotoUrl: "https://placehold.co/400x300/2d9e5f/ffffff?text=Foto+Timbangan",
       fotoUrlBerlakuHingga: "2026-12-31T23:59:59.000Z",
@@ -128,7 +130,7 @@ function buatState(): MockState {
     {
       id: "1003" as IdStr,
       tipe: "setor",
-      jumlah: 45000 as Rupiah,
+      jumlah: 55650 as Rupiah,
       catatan: null,
       waktu: "2024-09-05T10:00:00.000Z",
       dibuatOlehId: "user-admin-1" as UserId,
@@ -137,20 +139,8 @@ function buatState(): MockState {
       customerNama: "Siti Aminah",
       customerUsername: "nasabah02",
       items: [
-        {
-          wasteTypeId: "2" as IdStr,
-          namaSampah: "Plastik PET (Botol)",
-          berat: "12.00",
-          hargaSnapshot: 2500 as Rupiah,
-          subtotal: 30000 as Rupiah,
-        },
-        {
-          wasteTypeId: "3" as IdStr,
-          namaSampah: "Aluminium / Kaleng",
-          berat: "1.50",
-          hargaSnapshot: 8000 as Rupiah,
-          subtotal: 12000 as Rupiah,
-        },
+        { ...js("Botol air mineral/bodong/pet bersih"), berat: "12.00", subtotal: 52800 as Rupiah },
+        { ...js("Kaleng"), berat: "1.50", subtotal: 2850 as Rupiah },
       ],
       fotoUrl: "https://placehold.co/400x300/2d9e5f/ffffff?text=Timbangan+2",
       fotoUrlBerlakuHingga: "2026-12-31T23:59:59.000Z",

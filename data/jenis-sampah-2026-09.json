@@ -1,0 +1,771 @@
+{
+  "sumber": "2026 09 September 20 master BSIP dan lapak.xlsx, sheet REKAP (baris 5-89)",
+  "catatan": "hargaSbs = harga beli SBS Rinjani dari nasabah (dipakai sebagai hargaBeli). hargaLapak = harga jual ke lapak, kategori = kode huruf A-I dari Excel; keduanya belum disimpan di DB. Hanya satuan Kg yang diimpor (kontrak menghitung berat kg x harga per kg). Perbaikan dari Excel: no 60 & 61 nama rusak ('AC ? PK') diasumsikan 1/2 & 3/4 PK; spasi hilang di 'Botolplastik'/'Botolair' ditambahkan.",
+  "jenisSampah": [
+    {
+      "no": 1,
+      "kategori": "A",
+      "nama": "Kardus",
+      "satuan": "Kg",
+      "hargaLapak": 2000,
+      "hargaSbs": 1600,
+      "keterangan": null
+    },
+    {
+      "no": 2,
+      "kategori": "A",
+      "nama": "Koran A",
+      "satuan": "Kg",
+      "hargaLapak": 6000,
+      "hargaSbs": 4800,
+      "keterangan": null
+    },
+    {
+      "no": 3,
+      "kategori": "A",
+      "nama": "Koran Tabloid",
+      "satuan": "Kg",
+      "hargaLapak": 1500,
+      "hargaSbs": 1200,
+      "keterangan": null
+    },
+    {
+      "no": 4,
+      "kategori": "A",
+      "nama": "Buku (buku tulis/pelajaran kupas)",
+      "satuan": "Kg",
+      "hargaLapak": 1500,
+      "hargaSbs": 1200,
+      "keterangan": null
+    },
+    {
+      "no": 5,
+      "kategori": "A",
+      "nama": "Buku LKS/pelajaran tanpa dikupas sampul",
+      "satuan": "Kg",
+      "hargaLapak": 1000,
+      "hargaSbs": 850,
+      "keterangan": null
+    },
+    {
+      "no": 6,
+      "kategori": "A",
+      "nama": "Kertas putih/HVS",
+      "satuan": "Kg",
+      "hargaLapak": 2500,
+      "hargaSbs": 1900,
+      "keterangan": null
+    },
+    {
+      "no": 7,
+      "kategori": "A",
+      "nama": "Kantong semen",
+      "satuan": "Kg",
+      "hargaLapak": 2400,
+      "hargaSbs": 1600,
+      "keterangan": null
+    },
+    {
+      "no": 8,
+      "kategori": "A",
+      "nama": "Duplek",
+      "satuan": "Kg",
+      "hargaLapak": 800,
+      "hargaSbs": 700,
+      "keterangan": null
+    },
+    {
+      "no": 9,
+      "kategori": "A",
+      "nama": "Duplek kotor",
+      "satuan": "Kg",
+      "hargaLapak": 500,
+      "hargaSbs": 400,
+      "keterangan": null
+    },
+    {
+      "no": 10,
+      "kategori": "A",
+      "nama": "Majalah",
+      "satuan": "Kg",
+      "hargaLapak": 900,
+      "hargaSbs": 700,
+      "keterangan": null
+    },
+    {
+      "no": 11,
+      "kategori": "A",
+      "nama": "Tray telur/kertas telur",
+      "satuan": "Kg",
+      "hargaLapak": 400,
+      "hargaSbs": 350,
+      "keterangan": null
+    },
+    {
+      "no": 12,
+      "kategori": "B",
+      "nama": "Ember campur",
+      "satuan": "Kg",
+      "hargaLapak": 1500,
+      "hargaSbs": 1200,
+      "keterangan": null
+    },
+    {
+      "no": 13,
+      "kategori": "B",
+      "nama": "Botol plastik shampo, oli, sabun cair/HDPE",
+      "satuan": "Kg",
+      "hargaLapak": 2000,
+      "hargaSbs": 1600,
+      "keterangan": null
+    },
+    {
+      "no": 14,
+      "kategori": "B",
+      "nama": "Aqua gelas bersih",
+      "satuan": "Kg",
+      "hargaLapak": 4300,
+      "hargaSbs": 3450,
+      "keterangan": null
+    },
+    {
+      "no": 15,
+      "kategori": "B",
+      "nama": "Aqua gelas kotor",
+      "satuan": "Kg",
+      "hargaLapak": 2000,
+      "hargaSbs": 1600,
+      "keterangan": null
+    },
+    {
+      "no": 16,
+      "kategori": "B",
+      "nama": "Botol air mineral/bodong/pet bersih",
+      "satuan": "Kg",
+      "hargaLapak": 5500,
+      "hargaSbs": 4400,
+      "keterangan": null
+    },
+    {
+      "no": 17,
+      "kategori": "B",
+      "nama": "Botol air mineral/bodong kotor/pet kotor",
+      "satuan": "Kg",
+      "hargaLapak": 2000,
+      "hargaSbs": 1600,
+      "keterangan": null
+    },
+    {
+      "no": 18,
+      "kategori": "B",
+      "nama": "Botol Mineral Besar",
+      "satuan": "Kg",
+      "hargaLapak": 4800,
+      "hargaSbs": 3850,
+      "keterangan": null
+    },
+    {
+      "no": 19,
+      "kategori": "B",
+      "nama": "Tutup botol",
+      "satuan": "Kg",
+      "hargaLapak": 4000,
+      "hargaSbs": 3000,
+      "keterangan": null
+    },
+    {
+      "no": 20,
+      "kategori": "B",
+      "nama": "Tutup galon",
+      "satuan": "Kg",
+      "hargaLapak": 5000,
+      "hargaSbs": 4000,
+      "keterangan": null
+    },
+    {
+      "no": 21,
+      "kategori": "B",
+      "nama": "Galon aqua pecah",
+      "satuan": "Galon",
+      "hargaLapak": 5000,
+      "hargaSbs": 4000,
+      "keterangan": null
+    },
+    {
+      "no": 22,
+      "kategori": "B",
+      "nama": "Keping CD",
+      "satuan": "Kg",
+      "hargaLapak": 5000,
+      "hargaSbs": 4000,
+      "keterangan": null
+    },
+    {
+      "no": 23,
+      "kategori": "B",
+      "nama": "Karpet",
+      "satuan": "Kg",
+      "hargaLapak": 500,
+      "hargaSbs": 400,
+      "keterangan": null
+    },
+    {
+      "no": 24,
+      "kategori": "B",
+      "nama": "Paralon",
+      "satuan": "Kg",
+      "hargaLapak": 1000,
+      "hargaSbs": 800,
+      "keterangan": null
+    },
+    {
+      "no": 25,
+      "kategori": "B",
+      "nama": "Kristal bening",
+      "satuan": "Kg",
+      "hargaLapak": 5000,
+      "hargaSbs": 4000,
+      "keterangan": null
+    },
+    {
+      "no": 26,
+      "kategori": "B",
+      "nama": "Mika warna/Yakult",
+      "satuan": "Kg",
+      "hargaLapak": 400,
+      "hargaSbs": 300,
+      "keterangan": null
+    },
+    {
+      "no": 27,
+      "kategori": "B",
+      "nama": "Ale-ale/gelas warna",
+      "satuan": "Kg",
+      "hargaLapak": 2000,
+      "hargaSbs": 1600,
+      "keterangan": null
+    },
+    {
+      "no": 28,
+      "kategori": "B",
+      "nama": "Naso",
+      "satuan": "Kg",
+      "hargaLapak": 3500,
+      "hargaSbs": 2800,
+      "keterangan": null
+    },
+    {
+      "no": 29,
+      "kategori": "B",
+      "nama": "Ban dalem (mobil, motor, sepeda)",
+      "satuan": "Kg",
+      "hargaLapak": 500,
+      "hargaSbs": 400,
+      "keterangan": null
+    },
+    {
+      "no": 30,
+      "kategori": "C",
+      "nama": "Plastik bening lembaran",
+      "satuan": "Kg",
+      "hargaLapak": 1000,
+      "hargaSbs": 800,
+      "keterangan": null
+    },
+    {
+      "no": 31,
+      "kategori": "C",
+      "nama": "Plastik kemasan minyak goreng",
+      "satuan": "Kg",
+      "hargaLapak": 500,
+      "hargaSbs": 400,
+      "keterangan": null
+    },
+    {
+      "no": 32,
+      "kategori": "C",
+      "nama": "Plastik sunlight dan sejenisnya",
+      "satuan": "Kg",
+      "hargaLapak": 500,
+      "hargaSbs": 400,
+      "keterangan": null
+    },
+    {
+      "no": 33,
+      "kategori": "D",
+      "nama": "Botol beling warna",
+      "satuan": "Kg",
+      "hargaLapak": 200,
+      "hargaSbs": 150,
+      "keterangan": null
+    },
+    {
+      "no": 34,
+      "kategori": "D",
+      "nama": "Botol beling bening",
+      "satuan": "Kg",
+      "hargaLapak": 200,
+      "hargaSbs": 150,
+      "keterangan": null
+    },
+    {
+      "no": 35,
+      "kategori": "D",
+      "nama": "Beling kaca (kecuali kaca mobil)",
+      "satuan": "Kg",
+      "hargaLapak": 150,
+      "hargaSbs": 100,
+      "keterangan": null
+    },
+    {
+      "no": 36,
+      "kategori": "D",
+      "nama": "Botol bir",
+      "satuan": "Pcs",
+      "hargaLapak": 700,
+      "hargaSbs": 500,
+      "keterangan": null
+    },
+    {
+      "no": 37,
+      "kategori": "D",
+      "nama": "Botol Kecap",
+      "satuan": "Pcs",
+      "hargaLapak": 350,
+      "hargaSbs": 200,
+      "keterangan": null
+    },
+    {
+      "no": 38,
+      "kategori": "E",
+      "nama": "Besi Padat",
+      "satuan": "Kg",
+      "hargaLapak": 5200,
+      "hargaSbs": 4000,
+      "keterangan": null
+    },
+    {
+      "no": 39,
+      "kategori": "E",
+      "nama": "Besi Stalbes",
+      "satuan": "Kg",
+      "hargaLapak": 3700,
+      "hargaSbs": 2900,
+      "keterangan": null
+    },
+    {
+      "no": 40,
+      "kategori": "E",
+      "nama": "Kaleng",
+      "satuan": "Kg",
+      "hargaLapak": 2400,
+      "hargaSbs": 1900,
+      "keterangan": null
+    },
+    {
+      "no": 41,
+      "kategori": "E",
+      "nama": "Seng",
+      "satuan": "Kg",
+      "hargaLapak": 2000,
+      "hargaSbs": 1600,
+      "keterangan": null
+    },
+    {
+      "no": 42,
+      "kategori": "E",
+      "nama": "Kawat Spring Bed",
+      "satuan": "Kg",
+      "hargaLapak": 500,
+      "hargaSbs": 400,
+      "keterangan": null
+    },
+    {
+      "no": 43,
+      "kategori": "F",
+      "nama": "Tembaga bakar",
+      "satuan": "Kg",
+      "hargaLapak": 75000,
+      "hargaSbs": 60000,
+      "keterangan": null
+    },
+    {
+      "no": 44,
+      "kategori": "F",
+      "nama": "Tembaga kupas",
+      "satuan": "Kg",
+      "hargaLapak": 110000,
+      "hargaSbs": 88000,
+      "keterangan": null
+    },
+    {
+      "no": 45,
+      "kategori": "F",
+      "nama": "Kuningan",
+      "satuan": "Kg",
+      "hargaLapak": 40000,
+      "hargaSbs": 32000,
+      "keterangan": null
+    },
+    {
+      "no": 46,
+      "kategori": "F",
+      "nama": "Alumunium panci",
+      "satuan": "Kg",
+      "hargaLapak": 18000,
+      "hargaSbs": 14400,
+      "keterangan": null
+    },
+    {
+      "no": 47,
+      "kategori": "F",
+      "nama": "Alumunium pocari",
+      "satuan": "Kg",
+      "hargaLapak": 15000,
+      "hargaSbs": 12000,
+      "keterangan": null
+    },
+    {
+      "no": 48,
+      "kategori": "F",
+      "nama": "Alumunium babet",
+      "satuan": "Kg",
+      "hargaLapak": 10000,
+      "hargaSbs": 8000,
+      "keterangan": null
+    },
+    {
+      "no": 49,
+      "kategori": "F",
+      "nama": "Alumunium siku",
+      "satuan": "Kg",
+      "hargaLapak": 20000,
+      "hargaSbs": 16000,
+      "keterangan": null
+    },
+    {
+      "no": 50,
+      "kategori": "F",
+      "nama": "Acu motor/mobil",
+      "satuan": "Kg",
+      "hargaLapak": 10000,
+      "hargaSbs": 8000,
+      "keterangan": null
+    },
+    {
+      "no": 51,
+      "kategori": "F",
+      "nama": "Alumunium kuali",
+      "satuan": "Kg",
+      "hargaLapak": 10000,
+      "hargaSbs": 8000,
+      "keterangan": null
+    },
+    {
+      "no": 52,
+      "kategori": "G",
+      "nama": "Kabel listrik isi 3 (kawat tembaga)",
+      "satuan": "Kg",
+      "hargaLapak": 9000,
+      "hargaSbs": 7200,
+      "keterangan": null
+    },
+    {
+      "no": 53,
+      "kategori": "G",
+      "nama": "Kabel listrik isi 2 (kawat tembaga)",
+      "satuan": "Kg",
+      "hargaLapak": 7000,
+      "hargaSbs": 5600,
+      "keterangan": null
+    },
+    {
+      "no": 54,
+      "kategori": "G",
+      "nama": "Kabel listrik rambut/kecil (kecuali kabel antena)",
+      "satuan": "Kg",
+      "hargaLapak": 5000,
+      "hargaSbs": 4000,
+      "keterangan": null
+    },
+    {
+      "no": 55,
+      "kategori": "G",
+      "nama": "Kulit kabel",
+      "satuan": "Kg",
+      "hargaLapak": 1000,
+      "hargaSbs": 800,
+      "keterangan": null
+    },
+    {
+      "no": 56,
+      "kategori": "H",
+      "nama": "Kulkas 2 pintu",
+      "satuan": "Unit",
+      "hargaLapak": 150000,
+      "hargaSbs": 120000,
+      "keterangan": null
+    },
+    {
+      "no": 57,
+      "kategori": "H",
+      "nama": "Kulkas 1 pintu",
+      "satuan": "Unit",
+      "hargaLapak": 100000,
+      "hargaSbs": 80000,
+      "keterangan": null
+    },
+    {
+      "no": 58,
+      "kategori": "H",
+      "nama": "AC 1 PK (1 set)",
+      "satuan": "Unit",
+      "hargaLapak": 250000,
+      "hargaSbs": 200000,
+      "keterangan": null
+    },
+    {
+      "no": 59,
+      "kategori": "H",
+      "nama": "AC 2 PK (1 set)",
+      "satuan": "Unit",
+      "hargaLapak": 500000,
+      "hargaSbs": 400000,
+      "keterangan": null
+    },
+    {
+      "no": 60,
+      "kategori": "H",
+      "nama": "AC ½ PK (1 set)",
+      "satuan": "Unit",
+      "hargaLapak": 250000,
+      "hargaSbs": 200000,
+      "keterangan": null
+    },
+    {
+      "no": 61,
+      "kategori": "H",
+      "nama": "AC ¾ PK (1 set)",
+      "satuan": "Unit",
+      "hargaLapak": 275000,
+      "hargaSbs": 220000,
+      "keterangan": null
+    },
+    {
+      "no": 62,
+      "kategori": "H",
+      "nama": "Mesin cuci 1 lubang",
+      "satuan": "Unit",
+      "hargaLapak": 80000,
+      "hargaSbs": 64000,
+      "keterangan": null
+    },
+    {
+      "no": 63,
+      "kategori": "H",
+      "nama": "Mesin cuci 2 lubang",
+      "satuan": "Unit",
+      "hargaLapak": 60000,
+      "hargaSbs": 48000,
+      "keterangan": null
+    },
+    {
+      "no": 64,
+      "kategori": "H",
+      "nama": "Kipas angin (kecuali merk cina)",
+      "satuan": "Unit",
+      "hargaLapak": 10000,
+      "hargaSbs": 8000,
+      "keterangan": null
+    },
+    {
+      "no": 65,
+      "kategori": "H",
+      "nama": "TV 14 inc (tabung)",
+      "satuan": "Unit",
+      "hargaLapak": 15000,
+      "hargaSbs": 12000,
+      "keterangan": null
+    },
+    {
+      "no": 66,
+      "kategori": "H",
+      "nama": "TV 21 inc (tabung)",
+      "satuan": "Unit",
+      "hargaLapak": 25000,
+      "hargaSbs": 20000,
+      "keterangan": null
+    },
+    {
+      "no": 67,
+      "kategori": "H",
+      "nama": "TV LED/LCD (lihat kondisi)",
+      "satuan": "Unit",
+      "hargaLapak": 15000,
+      "hargaSbs": 12000,
+      "keterangan": null
+    },
+    {
+      "no": 68,
+      "kategori": "H",
+      "nama": "Monitor komputer (tabung)",
+      "satuan": "Unit",
+      "hargaLapak": 20000,
+      "hargaSbs": 16000,
+      "keterangan": null
+    },
+    {
+      "no": 69,
+      "kategori": "H",
+      "nama": "CPU komputer",
+      "satuan": "Unit",
+      "hargaLapak": 50000,
+      "hargaSbs": 40000,
+      "keterangan": null
+    },
+    {
+      "no": 70,
+      "kategori": "H",
+      "nama": "Lampu philip/osram/shinyoku",
+      "satuan": "Unit",
+      "hargaLapak": 500,
+      "hargaSbs": 400,
+      "keterangan": "Stop Sementara"
+    },
+    {
+      "no": 71,
+      "kategori": "H",
+      "nama": "Magicom komplit",
+      "satuan": "Unit",
+      "hargaLapak": 12000,
+      "hargaSbs": 9600,
+      "keterangan": null
+    },
+    {
+      "no": 72,
+      "kategori": "H",
+      "nama": "Magicom tanpa panci",
+      "satuan": "Unit",
+      "hargaLapak": 7000,
+      "hargaSbs": 5600,
+      "keterangan": null
+    },
+    {
+      "no": 73,
+      "kategori": "H",
+      "nama": "Hp jadul cina",
+      "satuan": "Unit",
+      "hargaLapak": 2000,
+      "hargaSbs": 1600,
+      "keterangan": null
+    },
+    {
+      "no": 74,
+      "kategori": "H",
+      "nama": "Hp jadul nokia",
+      "satuan": "Unit",
+      "hargaLapak": 3000,
+      "hargaSbs": 2400,
+      "keterangan": null
+    },
+    {
+      "no": 75,
+      "kategori": "H",
+      "nama": "Hp android cina",
+      "satuan": "Unit",
+      "hargaLapak": 5000,
+      "hargaSbs": 4000,
+      "keterangan": null
+    },
+    {
+      "no": 76,
+      "kategori": "H",
+      "nama": "Hp android samsung",
+      "satuan": "Unit",
+      "hargaLapak": 5000,
+      "hargaSbs": 4000,
+      "keterangan": null
+    },
+    {
+      "no": 77,
+      "kategori": "H",
+      "nama": "Laptop",
+      "satuan": "Unit",
+      "hargaLapak": 20000,
+      "hargaSbs": 18000,
+      "keterangan": null
+    },
+    {
+      "no": 78,
+      "kategori": "H",
+      "nama": "Motherboard komputer",
+      "satuan": "Kg",
+      "hargaLapak": 40000,
+      "hargaSbs": 32000,
+      "keterangan": null
+    },
+    {
+      "no": 79,
+      "kategori": "H",
+      "nama": "Hardisk komputer",
+      "satuan": "Unit",
+      "hargaLapak": 7000,
+      "hargaSbs": 5600,
+      "keterangan": null
+    },
+    {
+      "no": 80,
+      "kategori": "H",
+      "nama": "Baterai Laptop",
+      "satuan": "Kg",
+      "hargaLapak": 10000,
+      "hargaSbs": 8000,
+      "keterangan": null
+    },
+    {
+      "no": 81,
+      "kategori": "H",
+      "nama": "Tablet",
+      "satuan": "Unit",
+      "hargaLapak": 4000,
+      "hargaSbs": 3200,
+      "keterangan": null
+    },
+    {
+      "no": 82,
+      "kategori": "I",
+      "nama": "Mijel",
+      "satuan": "Liter",
+      "hargaLapak": 7500,
+      "hargaSbs": 6000,
+      "keterangan": null
+    },
+    {
+      "no": 83,
+      "kategori": "I",
+      "nama": "Galon Le Minerale",
+      "satuan": "Kg",
+      "hargaLapak": 4100,
+      "hargaSbs": 3280,
+      "keterangan": null
+    },
+    {
+      "no": 84,
+      "kategori": "I",
+      "nama": "Tetra Pack",
+      "satuan": "Kg",
+      "hargaLapak": 300,
+      "hargaSbs": 300,
+      "keterangan": null
+    },
+    {
+      "no": 85,
+      "kategori": "I",
+      "nama": "Sachet",
+      "satuan": "Kg",
+      "hargaLapak": 1000,
+      "hargaSbs": 700,
+      "keterangan": null
+    }
+  ]
+}

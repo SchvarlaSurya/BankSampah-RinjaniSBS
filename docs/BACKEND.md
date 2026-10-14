@@ -109,6 +109,20 @@ dicabut, kunci login dibuka, wajib ganti password. Hanya untuk super_admin aktif
 
 Kedua skrip membaca env dari `.env.local` / `.env` bila ada.
 
+## Master jenis sampah dari Excel
+
+`data/jenis-sampah-2026-09.json` = sheet REKAP dari "2026 09 September 20 master BSIP dan lapak.xlsx"
+(85 jenis; `hargaSbs` = harga beli dari nasabah, `hargaLapak` & `kategori` belum disimpan di DB).
+
+```bash
+npm run seed:jenis-sampah              # rencana saja, tidak menulis
+npm run seed:jenis-sampah -- --tulis   # tulis jenis yang belum ada
+```
+
+Hanya satuan Kg (57 jenis); Unit/Pcs/Galon/Liter (28) menunggu keputusan kontrak satuan.
+Dicocokkan per nama (tanpa beda besar-kecil); jenis yang sudah ada tidak diubah, selisih harga
+hanya dilaporkan. Memakai `DATABASE_URL` (role app_server cukup). Mock memuat file yang sama.
+
 ## Menjalankan tes
 
 ```bash

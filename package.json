@@ -15,7 +15,8 @@
     "db:local:down": "docker compose down",
     "test:db": "node scripts/test-db.mjs",
     "seed:superadmin": "tsx --conditions=react-server scripts/seed-superadmin.ts",
-    "reset:superadmin": "tsx --conditions=react-server scripts/reset-password-superadmin.ts"
+    "reset:superadmin": "tsx --conditions=react-server scripts/reset-password-superadmin.ts",
+    "seed:jenis-sampah": "tsx scripts/seed-jenis-sampah.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
