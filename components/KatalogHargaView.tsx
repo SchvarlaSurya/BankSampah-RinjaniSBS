@@ -27,7 +27,6 @@ import {
   ArrowUpDown,
   Filter,
   RotateCcw,
-  Layers,
   Coins,
   Store,
   TrendingUp,
@@ -313,16 +312,20 @@ export function KatalogHargaView({ sesi, list }: Props) {
           )
         }
         description={
-          isAdmin
-            ? "Kelola tarif harga beli nasabah dan harga jual ke lapak/pengepul untuk menjaga margin kas operasional."
-            : "Daftar tarif harga beli resmi per kilogram untuk setiap kategori sampah daur ulang secara transparan dan terkini."
+          <span className="hidden sm:inline">
+            {isAdmin
+              ? "Kelola tarif harga beli nasabah dan harga jual ke lapak/pengepul untuk menjaga margin kas operasional."
+              : "Daftar tarif harga beli resmi per kilogram untuk setiap kategori sampah daur ulang secara transparan dan terkini."}
+          </span>
         }
         actions={
           <>
             {isSuperAdmin && (
               <Link href="/admin/audit-harga" className={buttonClass("secondary")}>
                 <History aria-hidden="true" />
-                <span>Audit log harga</span>
+                <span>
+                  Audit<span className="hidden sm:inline"> log harga</span>
+                </span>
                 <ArrowRight aria-hidden="true" />
               </Link>
             )}
@@ -331,7 +334,9 @@ export function KatalogHargaView({ sesi, list }: Props) {
             {isAdmin && (
               <Button onClick={handleOpenAdd}>
                 <Plus />
-                <span>Tambah sampah</span>
+                <span>
+                  Tambah<span className="hidden sm:inline"> sampah</span>
+                </span>
               </Button>
             )}
           </>
@@ -407,7 +412,7 @@ export function KatalogHargaView({ sesi, list }: Props) {
             </button>
           </div>
 
-          <p className="flex items-center gap-1.5 text-sm text-ink-muted">
+          <p className="hidden items-center gap-1.5 text-sm text-ink-muted sm:flex">
             {activePriceTab === "beli" ? (
               <>
                 <Info className="size-4 shrink-0" aria-hidden="true" />
@@ -425,7 +430,7 @@ export function KatalogHargaView({ sesi, list }: Props) {
 
       {/* FILTERS & SEARCH & SORT TOOLBAR */}
       <Card>
-        <div className="flex flex-col gap-3 p-5 lg:flex-row lg:items-center">
+        <div className="flex flex-col gap-3 p-4 sm:p-5 lg:flex-row lg:items-center">
           {/* Search Box */}
           <div className="relative min-w-0 flex-1">
             <label htmlFor="katalog-cari" className="sr-only">
@@ -435,7 +440,7 @@ export function KatalogHargaView({ sesi, list }: Props) {
             <Input
               id="katalog-cari"
               type="text"
-              placeholder="Cari jenis sampah (mis: Botol PET, Kardus)…"
+              placeholder="Cari jenis sampah…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pr-11 pl-10"
@@ -453,7 +458,7 @@ export function KatalogHargaView({ sesi, list }: Props) {
             )}
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:items-center">
+          <div className="grid grid-cols-2 gap-3 lg:flex lg:items-center">
             {/* Dropdown Kategori */}
             <div className="lg:w-48">
               <label htmlFor="katalog-kategori" className="sr-only">
@@ -492,7 +497,7 @@ export function KatalogHargaView({ sesi, list }: Props) {
 
             {/* Status Filter for Admin Only */}
             {isAdmin && (
-              <div role="group" aria-label="Filter status" className="inline-flex rounded-control bg-surface-muted p-1 ring-1 ring-line ring-inset sm:col-span-2 lg:col-span-1">
+              <div role="group" aria-label="Filter status" className="inline-flex rounded-control bg-surface-muted p-1 ring-1 ring-line ring-inset col-span-2 lg:col-span-1">
                 <button
                   type="button"
                   aria-pressed={statusFilter === "aktif"}
@@ -529,7 +534,7 @@ export function KatalogHargaView({ sesi, list }: Props) {
         </div>
 
         {/* Active Filters Badges & Dynamic Count Info */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-3 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-2.5 text-sm sm:px-5">
           <div className="flex flex-wrap items-center gap-2">
             {selectedCategory !== "all" && (
               <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-brand-soft pr-1 pl-3 text-xs font-medium text-brand-hover">
@@ -633,7 +638,24 @@ export function KatalogHargaView({ sesi, list }: Props) {
             }
           />
         ) : (
-          <ul className="divide-y divide-line">
+          <table className="w-full text-sm">
+            <caption className="sr-only">Daftar harga jenis sampah</caption>
+            <thead className="bg-surface-muted">
+              <tr className="text-left text-xs text-ink-muted">
+                <th scope="col" className="h-10 pr-2 pl-4 font-medium sm:pl-5">
+                  Jenis sampah
+                </th>
+                <th scope="col" className="h-10 px-2 text-right font-medium whitespace-nowrap">
+                  {isAdmin && activePriceTab === "jual" ? "Harga jual/kg" : "Harga beli/kg"}
+                </th>
+                {isAdmin && (
+                  <th scope="col" className="h-10 w-12 pr-2 sm:pr-3">
+                    <span className="sr-only">Aksi</span>
+                  </th>
+                )}
+              </tr>
+            </thead>
+            <tbody>
             {filteredList.map((item) => {
               const detectedCat = detectItemCategory(item.nama);
               const categoryLabel = getCategoryLabel(detectedCat);
@@ -645,94 +667,75 @@ export function KatalogHargaView({ sesi, list }: Props) {
               const tanda = (n: number) => (n >= 0 ? "+" : "");
 
               return (
-                <li
-                  key={item.id}
-                  className="flex flex-col gap-3 px-5 py-4 transition-colors duration-150 hover:bg-brand-soft sm:flex-row sm:items-center sm:gap-6"
-                >
-                  {/* Kiri: nama + kategori + status + riwayat */}
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-medium text-ink">{item.nama}</h3>
-                      <Badge tone="neutral">
-                        <Layers aria-hidden="true" />
-                        {categoryLabel}
-                      </Badge>
-                      {isAdmin && (
-                        <Badge tone={item.aktif ? "success" : "danger"}>{item.aktif ? "Aktif" : "Nonaktif"}</Badge>
-                      )}
-                    </div>
-                    <p className="flex items-center gap-1.5 text-xs text-ink-muted">
-                      <Clock className="size-3.5 shrink-0" aria-hidden="true" />
-                      {item.terakhirDiubah ? (
-                        <span className="truncate">
-                          Diubah{" "}
-                          <span className="tabular-nums">
-                            {new Date(item.terakhirDiubah.waktu).toLocaleString("id-ID", {
-                              timeZone: "Asia/Jakarta",
-                              dateStyle: "medium",
-                              timeStyle: "short",
-                            })}{" "}
-                            WIB
-                          </span>{" "}
-                          · oleh {item.terakhirDiubah.diubahOlehNama}
-                        </span>
-                      ) : (
-                        <span>Harga belum pernah diubah</span>
-                      )}
-                    </p>
-                  </div>
-
-                  {/* Kanan: harga + margin + aksi */}
-                  <div className="flex items-center justify-between gap-4 sm:justify-end">
-                    <div className="text-left sm:text-right">
-                      {isAdmin && activePriceTab === "jual" ? (
-                        <>
-                          <p className="text-lg font-semibold text-ink tabular-nums">
-                            {effectiveHargaJual === null ? (
-                              <span className="text-sm font-medium text-ink-muted">Belum diatur</span>
-                            ) : (
-                              <>
-                                {formatRupiah(effectiveHargaJual)}
-                                <span className="text-sm font-normal text-ink-muted">/kg</span>
-                              </>
-                            )}
-                          </p>
-                          <p className="text-xs text-ink-muted tabular-nums">
-                            Beli {formatRupiah(item.hargaBeli)}/kg · margin{" "}
-                            <span className="font-semibold text-ink">
-                              {marginRupiah === null ? "-" : `${tanda(marginRupiah)}${formatRupiah(marginRupiah)}/kg`}
+                <tr key={item.id} className="border-t border-line transition-colors duration-150 hover:bg-brand-soft">
+                  {/* Nama + kategori (+ status & riwayat) */}
+                  <td className="py-2.5 pr-2 pl-4 align-middle sm:pl-5">
+                    <p className="leading-snug font-medium text-ink">{item.nama}</p>
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-ink-muted">
+                      <span>{categoryLabel}</span>
+                      {isAdmin && !item.aktif && <Badge tone="danger" className="px-1.5 py-0">Nonaktif</Badge>}
+                      <span className="hidden items-center gap-1 sm:inline-flex">
+                        <Clock className="size-3 shrink-0" aria-hidden="true" />
+                        {item.terakhirDiubah ? (
+                          <span>
+                            Diubah{" "}
+                            <span className="tabular-nums">
+                              {new Date(item.terakhirDiubah.waktu).toLocaleString("id-ID", {
+                                timeZone: "Asia/Jakarta",
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              })}{" "}
+                              WIB
                             </span>{" "}
-                            ({marginPersen === null ? "-" : `${tanda(marginRupiah ?? 0)}${marginPersen}%`})
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-lg font-semibold text-ink tabular-nums">
-                            {formatRupiah(item.hargaBeli)}
-                            <span className="text-sm font-normal text-ink-muted">/kg</span>
-                          </p>
-                          <p className="text-xs text-ink-muted">Harga beli</p>
-                        </>
-                      )}
-                    </div>
+                            · oleh {item.terakhirDiubah.diubahOlehNama}
+                          </span>
+                        ) : (
+                          <span>Harga belum pernah diubah</span>
+                        )}
+                      </span>
+                    </p>
+                  </td>
 
-                    {/* Card Actions - ONLY ADMIN & SUPER ADMIN SEE "Edit Harga" BUTTON */}
-                    {isAdmin && (
-                      <Button
-                        variant="secondary"
+                  {/* Harga (+ margin di tab jual) */}
+                  <td className="px-2 py-2.5 text-right align-middle whitespace-nowrap tabular-nums">
+                    {isAdmin && activePriceTab === "jual" ? (
+                      <>
+                        {effectiveHargaJual === null ? (
+                          <span className="text-xs text-ink-muted">Belum diatur</span>
+                        ) : (
+                          <span className="font-semibold text-ink">{formatRupiah(effectiveHargaJual)}</span>
+                        )}
+                        {effectiveHargaJual !== null && (
+                          <span className="block text-xs text-ink-muted">
+                            margin {marginRupiah === null ? "-" : `${tanda(marginRupiah)}${formatRupiah(marginRupiah)}/kg`}{" "}
+                            ({marginPersen === null ? "-" : `${tanda(marginRupiah ?? 0)}${marginPersen}%`})
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="font-semibold text-ink">{formatRupiah(item.hargaBeli)}</span>
+                    )}
+                  </td>
+
+                  {/* Aksi: hanya admin & super admin */}
+                  {isAdmin && (
+                    <td className="py-1 pr-2 text-right align-middle sm:pr-3">
+                      <button
+                        type="button"
                         onClick={() => handleOpenEdit(item)}
                         aria-label={`Edit harga ${item.nama}`}
-                        className="shrink-0"
+                        title="Edit harga"
+                        className={buttonClass("ghost", "icon")}
                       >
                         <Edit2 />
-                        <span>Edit</span>
-                      </Button>
-                    )}
-                  </div>
-                </li>
+                      </button>
+                    </td>
+                  )}
+                </tr>
               );
             })}
-          </ul>
+            </tbody>
+          </table>
         )}
       </Card>
 
