@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { queries } from "@/lib/api/queries";
 import { KatalogHarga } from "@/components/katalog-harga";
-import { Recycle, LogIn, LayoutDashboard } from "lucide-react";
+import { LogIn, LayoutDashboard } from "lucide-react";
+import { buttonClass } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -15,53 +16,48 @@ export default async function PublicKatalogPage() {
     : "/login";
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link
-            href="/"
-            className="flex items-center gap-2.5 font-bold text-lg text-emerald-400 hover:text-emerald-300 transition-colors"
-          >
-            <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-              <Recycle className="w-5 h-5" />
-            </div>
-            <span>
-              Bank Sampah <span className="text-slate-400 text-sm font-medium">Rinjani SBS</span>
-            </span>
+    <div className="flex min-h-screen flex-col bg-canvas">
+      <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur">
+        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+          <Link href="/" className="min-w-0 leading-tight">
+            <span className="block text-[0.6875rem] font-medium tracking-wide text-ink-muted uppercase">Bank Sampah</span>
+            <span className="block truncate font-semibold text-ink">SBS Rinjani</span>
           </Link>
-
-          <div className="flex items-center gap-3">
-            {sesi ? (
-              <Link
-                href={dashboardHref}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-semibold transition-colors"
-              >
-                <LayoutDashboard className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Dashboard ({sesi.nama})</span>
-              </Link>
-            ) : (
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all shadow-md shadow-emerald-500/20"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Masuk / Login</span>
-              </Link>
-            )}
-          </div>
+          {sesi ? (
+            <Link href={dashboardHref} className={buttonClass("secondary")}>
+              <LayoutDashboard aria-hidden="true" />
+              <span className="hidden sm:inline">Dashboard</span>
+              <span className="sr-only sm:hidden">Dashboard</span>
+            </Link>
+          ) : (
+            <Link href="/login" className={buttonClass("primary")}>
+              <LogIn aria-hidden="true" />
+              Masuk
+            </Link>
+          )}
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+      {/* Pita merek (publik): judul condensed di atas hijau tua, motif atap dari logo. */}
+      <section className="relative overflow-hidden bg-brand-deep text-white">
+        <div className="mx-auto max-w-6xl px-4 pt-8 pb-14 sm:px-6 sm:pt-12 sm:pb-20">
+          <p className="text-sm font-medium tracking-[0.2em] text-white/80 uppercase">Harga beli per kilogram</p>
+          <h1 className="mt-2 font-display text-4xl leading-[0.95] font-extrabold tracking-tight uppercase sm:text-6xl">
+            Katalog harga sampah
+          </h1>
+        </div>
+        <svg aria-hidden="true" viewBox="0 0 600 60" preserveAspectRatio="none" className="absolute inset-x-0 bottom-0 h-8 w-full text-canvas sm:h-12">
+          <path d="M0 60 L0 46 L230 9 L262 22 L330 0 L600 46 L600 60 Z" fill="currentColor" />
+        </svg>
+      </section>
+
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
         {/* Katalog butuh login: semua query backend memeriksa sesi (belum ada katalog publik). */}
         <KatalogHarga />
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800/60 py-4 text-center text-xs text-slate-500">
-        Bank Sampah Rinjani SBS &copy; {new Date().getFullYear()} &bull; Layanan Terpadu Daur Ulang Berkelanjutan
+      <footer className="border-t border-line py-4 text-center text-xs text-ink-muted">
+        Bank Sampah Rinjani SBS &copy; {new Date().getFullYear()}
       </footer>
     </div>
   );
