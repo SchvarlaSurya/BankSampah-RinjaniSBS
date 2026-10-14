@@ -4,7 +4,9 @@ import Link from "next/link";
 import { queries } from "@/lib/api/queries";
 import { ROUTES } from "@/contract";
 import { actions } from "@/lib/api/actions";
-import { Recycle, LogOut, Wallet } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { buttonClass } from "@/components/ui/button";
+import { NavTab, type ItemNav } from "@/components/shell/nav";
 
 export default async function NasabahLayout({
   children,
@@ -26,50 +28,22 @@ export default async function NasabahLayout({
     redirect(ROUTES.home[sesi.role]);
   }
 
+  const menu: ItemNav[] = [
+    { href: "/nasabah", label: "Saldo & Riwayat", ikon: "dashboard" },
+    { href: "/nasabah/katalog", label: "Katalog Harga", ikon: "sampah" },
+  ];
+
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
-      {/* Header / Navbar */}
-      <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link
-              href="/nasabah"
-              className="flex items-center gap-2.5 font-bold text-lg text-emerald-400 hover:text-emerald-300 transition-colors"
-            >
-              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                <Recycle className="w-5 h-5" />
-              </div>
-              <span>Bank Sampah <span className="text-slate-400 text-sm font-medium">Rinjani SBS</span></span>
-            </Link>
+    <div className="flex min-h-screen flex-col bg-canvas">
+      <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur">
+        <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-3 px-4 sm:px-6">
+          <Link href="/nasabah" className="min-w-0 leading-tight">
+            <span className="block text-[0.6875rem] font-medium tracking-wide text-ink-muted uppercase">Bank Sampah</span>
+            <span className="block truncate font-semibold text-ink">SBS Rinjani</span>
+          </Link>
 
-            <nav className="hidden sm:flex items-center gap-1">
-              <Link
-                href="/nasabah"
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors"
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/nasabah/katalog"
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors"
-              >
-                Katalog Harga
-              </Link>
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/nasabah/katalog"
-              className="sm:hidden px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-900 border border-slate-800"
-            >
-              Katalog
-            </Link>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs">
-              <Wallet className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="font-semibold text-slate-200">{sesi.nama}</span>
-            </div>
-
+          <div className="flex items-center gap-2">
+            <span className="hidden max-w-48 truncate text-sm text-ink-muted sm:block">{sesi.nama}</span>
             <form
               action={async () => {
                 "use server";
@@ -77,26 +51,22 @@ export default async function NasabahLayout({
                 redirect(ROUTES.login);
               }}
             >
-              <button
-                type="submit"
-                className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors text-xs font-medium flex items-center gap-1.5"
-                title="Keluar / Logout"
-              >
-                <LogOut className="w-4 h-4" />
+              <button type="submit" className={buttonClass("ghost")} title="Keluar">
+                <LogOut aria-hidden="true" />
                 <span className="hidden sm:inline">Keluar</span>
+                <span className="sr-only sm:hidden">Keluar</span>
               </button>
             </form>
           </div>
         </div>
+        <div className="mx-auto w-full max-w-5xl px-4 sm:px-6">
+          <NavTab items={menu} akar="/nasabah" />
+        </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-        {children}
-      </main>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-8">{children}</main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800/60 py-4 text-center text-xs text-slate-500">
+      <footer className="border-t border-line py-4 text-center text-xs text-ink-muted">
         Bank Sampah Rinjani SBS &copy; {new Date().getFullYear()}
       </footer>
     </div>
