@@ -35,10 +35,19 @@ export function BadgeTipe({ tipe }: { tipe: TipeTransaksi }) {
   return <Badge tone={nada}>{label}</Badge>;
 }
 
-/** Jumlah bertanda: + hijau tua, - teks utama (bukan merah, supaya tidak terasa "error"). */
+/**
+ * Jumlah bertanda: positif = teks success-fg di atas badge success-bg; negatif = teks utama
+ * (bukan merah, supaya pengurangan saldo tidak terbaca sebagai "error").
+ */
 export function JumlahTransaksi({ jumlah, className }: { jumlah: number; className?: string }) {
   return (
-    <span className={cn("font-semibold tabular-nums whitespace-nowrap", jumlah > 0 ? "text-success-fg" : "text-ink", className)}>
+    <span
+      className={cn(
+        "font-semibold tabular-nums whitespace-nowrap",
+        jumlah > 0 ? "rounded-md bg-success-bg px-2 py-0.5 text-success-fg" : "px-2 py-0.5 text-ink",
+        className,
+      )}
+    >
       {jumlah > 0 ? "+" : ""}
       {formatRupiah(jumlah)}
     </span>
