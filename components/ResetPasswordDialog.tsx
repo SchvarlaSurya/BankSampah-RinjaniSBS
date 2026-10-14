@@ -19,7 +19,8 @@ interface ResetPasswordDialogProps {
   username: string;
   nama: string;
   role?: "admin" | "nasabah" | "super_admin";
-  customTrigger?: (onClick: () => void) => React.ReactNode;
+  /** "kecil" = tombol ringkas (halaman detail nasabah). Props harus serializable: komponen ini dipakai dari Server Component. */
+  varian?: "default" | "kecil";
   onSuccess?: () => void;
 }
 
@@ -28,7 +29,7 @@ export default function ResetPasswordDialog({
   username,
   nama,
   role,
-  customTrigger,
+  varian = "default",
   onSuccess,
 }: ResetPasswordDialogProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -82,11 +83,19 @@ export default function ResetPasswordDialog({
 
   return (
     <>
-      {customTrigger ? (
-        customTrigger(() => {
-          setErrorMessage(null);
-          setConfirmOpen(true);
-        })
+      {varian === "kecil" ? (
+        <button
+          type="button"
+          onClick={() => {
+            setErrorMessage(null);
+            setConfirmOpen(true);
+          }}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 hover:text-amber-300 text-xs font-medium transition-colors"
+          title={`Reset password untuk ${nama}`}
+        >
+          <KeyRound className="w-3 h-3" />
+          <span>Reset Password</span>
+        </button>
       ) : (
         <button
           type="button"

@@ -14,7 +14,6 @@ import {
   UserX,
   ChevronLeft,
   AlertCircle,
-  KeyRound,
 } from "lucide-react";
 import ResetPasswordDialog from "@/components/ResetPasswordDialog";
 
@@ -106,17 +105,7 @@ export default async function AdminNasabahDetailPage({
                     username={nasabah.username}
                     nama={nasabah.nama}
                     role="nasabah"
-                    customTrigger={(openDialog) => (
-                      <button
-                        type="button"
-                        onClick={openDialog}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 hover:text-amber-300 text-xs font-medium transition-colors"
-                        title="Reset password nasabah ini"
-                      >
-                        <KeyRound className="w-3 h-3" />
-                        <span>Reset Password</span>
-                      </button>
-                    )}
+                    varian="kecil"
                   />
                 )}
               </div>
