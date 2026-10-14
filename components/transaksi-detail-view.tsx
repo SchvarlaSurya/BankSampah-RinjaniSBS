@@ -59,7 +59,7 @@ export function TransaksiDetailView({
             <div className="bg-surface px-5 py-4 sm:px-6">
               <dt className="text-xs text-ink-muted">Nasabah</dt>
               <dd className="mt-0.5 font-medium text-ink">{tx.customerNama}</dd>
-              <dd className="text-sm text-ink-muted tabular-nums">@{tx.customerUsername}</dd>
+              {tx.customerUsername && <dd className="text-sm text-ink-muted tabular-nums">@{tx.customerUsername}</dd>}
             </div>
           )}
           <div className="bg-surface px-5 py-4 sm:px-6">
@@ -83,30 +83,19 @@ export function TransaksiDetailView({
               </span>
             }
           />
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-surface-muted">
-                <tr className="text-left text-xs text-ink-muted">
-                  <th className="h-10 px-5 font-medium">Barang</th>
-                  <th className="h-10 px-5 text-right font-medium">Berat × harga</th>
-                  <th className="h-10 px-5 text-right font-medium">Subtotal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tx.items.map((item, idx) => (
-                  <tr key={idx} className="border-t border-line">
-                    <td className="h-11 px-5 text-ink">{item.namaSampah}</td>
-                    <td className="h-11 px-5 text-right whitespace-nowrap text-ink-muted tabular-nums">
-                      {item.berat} kg × {formatRupiah(item.hargaSnapshot)}/kg
-                    </td>
-                    <td className="h-11 px-5 text-right font-medium whitespace-nowrap text-ink tabular-nums">
-                      {formatRupiah(item.subtotal)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ul className="divide-y divide-line">
+            {tx.items.map((item, idx) => (
+              <li key={idx} className="flex min-h-14 items-center justify-between gap-4 px-5 py-3 sm:px-6">
+                <div className="min-w-0">
+                  <p className="text-ink">{item.namaSampah}</p>
+                  <p className="text-sm text-ink-muted tabular-nums">
+                    {item.berat} kg × {formatRupiah(item.hargaSnapshot)}/kg
+                  </p>
+                </div>
+                <span className="shrink-0 font-semibold text-ink tabular-nums">{formatRupiah(item.subtotal)}</span>
+              </li>
+            ))}
+          </ul>
         </Card>
       )}
 

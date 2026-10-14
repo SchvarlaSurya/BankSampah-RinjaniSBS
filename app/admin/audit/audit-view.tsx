@@ -201,15 +201,17 @@ export function AuditView({
                   const terbukaIni = terbuka.has(tx.id);
                   return (
                     <li key={tx.id} className={terbukaIni ? "bg-surface-muted/60" : undefined}>
-                      <div className="flex items-center gap-3 px-4 py-3 sm:px-5">
+                      <div className="flex items-center gap-2 px-4 py-3 sm:gap-3 sm:px-5">
                         <button
                           type="button"
                           onClick={() => alihkan(tx.id)}
                           aria-expanded={terbukaIni}
                           aria-controls={`audit-rinci-${tx.id}`}
-                          className="flex min-w-0 flex-1 items-center gap-3 rounded-control text-left"
+                          className="flex min-w-0 flex-1 items-center gap-2 rounded-control text-left sm:gap-3"
                         >
-                          <IkonTipe tipe={tx.tipe} />
+                          <span className="hidden sm:block">
+                            <IkonTipe tipe={tx.tipe} />
+                          </span>
                           <span className="min-w-0 flex-1 md:flex md:items-center md:gap-6">
                             <span className="block min-w-0 md:w-64 md:shrink-0">
                               <span className="block truncate font-medium text-ink">{tx.customerNama}</span>
@@ -238,7 +240,7 @@ export function AuditView({
                           <button
                             type="button"
                             onClick={() => setFotoBesar({ url: tx.fotoUrl!, alt: `Foto timbangan transaksi ${tx.id}` })}
-                            className="size-12 shrink-0 overflow-hidden rounded-control border border-line bg-surface-muted"
+                            className="size-10 shrink-0 overflow-hidden rounded-control border border-line bg-surface-muted sm:size-12"
                             aria-label={`Perbesar foto timbangan transaksi ${tx.id}`}
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element -- URL foto bertanda tangan berumur 5 menit; next/image tidak cocok. */}

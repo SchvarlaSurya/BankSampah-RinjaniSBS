@@ -387,7 +387,9 @@ export function KatalogHargaView({ sesi, list }: Props) {
               }`}
             >
               <Coins className="size-4" aria-hidden="true" />
-              <span>Harga beli (nasabah)</span>
+              <span className="whitespace-nowrap">
+                Harga beli<span className="hidden sm:inline"> (nasabah)</span>
+              </span>
             </button>
             <button
               type="button"
@@ -399,7 +401,9 @@ export function KatalogHargaView({ sesi, list }: Props) {
               }`}
             >
               <Store className="size-4" aria-hidden="true" />
-              <span>Harga jual (lapak)</span>
+              <span className="whitespace-nowrap">
+                Harga jual<span className="hidden sm:inline"> (lapak)</span>
+              </span>
             </button>
           </div>
 

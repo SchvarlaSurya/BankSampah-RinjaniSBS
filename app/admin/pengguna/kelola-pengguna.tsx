@@ -603,7 +603,7 @@ export function KelolaPengguna({
                   </div>
 
                   {isSuperAdmin && !isSelf && (
-                    <div className="flex flex-wrap items-center gap-2 pl-13 sm:justify-end sm:pl-0">
+                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                       {/* Reset Password Button: Hanya untuk super_admin, pada akun non-super_admin dan bukan diri sendiri */}
                       {!isTargetSuperAdmin && (
                         <ResetPasswordDialog
