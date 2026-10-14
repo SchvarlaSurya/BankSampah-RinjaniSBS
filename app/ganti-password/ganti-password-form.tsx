@@ -4,7 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { actions } from "@/lib/api/actions";
 import { ERROR_MESSAGES, LIMIT } from "@/contract";
-import { KeyRound, Lock, AlertCircle, CheckCircle2, Loader2, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { KeyRound, Loader2, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Field, inputClass } from "@/components/ui/field";
+import { Alert } from "@/components/ui/feedback";
+import { LogoSbs } from "@/components/shell/logo";
 
 /** `tujuan` = halaman beranda role pengguna, ditentukan Server Component (page.tsx). */
 export function GantiPasswordForm({ tujuan }: { tujuan: string }) {
@@ -54,39 +58,32 @@ export function GantiPasswordForm({ tujuan }: { tujuan: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 py-8 selection:bg-emerald-500 selection:text-white relative overflow-x-hidden overflow-y-auto">
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-500/10 blur-[120px] rounded-full pointer-events-none" />
+    <main className="flex min-h-screen items-center justify-center bg-canvas px-4 py-10">
+      <div className="w-full max-w-md space-y-6">
+        <div className="flex justify-center">
+          <LogoSbs className="w-40" priority />
+        </div>
 
-      <div className="w-full max-w-md relative z-10">
-        <div className="bg-slate-900/90 border border-slate-800 backdrop-blur-xl rounded-2xl p-8 shadow-2xl">
-          <div className="flex flex-col items-center text-center mb-8">
-            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 mb-4">
-              <KeyRound className="w-8 h-8" />
+        <section className="rounded-card border border-line bg-surface p-6 shadow-card sm:p-8">
+          <div className="mb-6 flex items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning-bg text-warning-fg">
+              <KeyRound className="size-5" aria-hidden="true" />
+            </span>
+            <div className="space-y-1">
+              <h1 className="text-lg font-semibold text-ink">Wajib ganti password</h1>
+              <p className="text-sm text-ink-muted">
+                Untuk keamanan akun Anda, silakan buat password baru (minimal {LIMIT.PASSWORD_MIN} karakter).
+              </p>
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-white">Wajib Ganti Password</h1>
-            <p className="text-xs text-slate-400 mt-1">
-              Untuk keamanan akun Anda, silakan buat password baru (minimal {LIMIT.PASSWORD_MIN} karakter).
-            </p>
           </div>
 
-          {errorMessage && (
-            <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-3">
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-              <p className="font-semibold">{errorMessage}</p>
-            </div>
-          )}
+          {errorMessage && <Alert tone="danger" className="mb-5">{errorMessage}</Alert>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Password Lama */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                Password Saat Ini / Sementara
-              </label>
+            <Field label="Password saat ini / sementara" htmlFor="gpw-lama" error={fieldErrors.passwordLama?.join(", ")}>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <Lock className="w-4 h-4" />
-                </div>
                 <input
+                  id="gpw-lama"
                   type={showOld ? "text" : "password"}
                   required
                   disabled={loading}
@@ -99,31 +96,25 @@ export function GantiPasswordForm({ tujuan }: { tujuan: string }) {
                     }
                   }}
                   placeholder="Masukkan password saat ini"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-100 placeholder-slate-600 text-sm rounded-xl pl-10 pr-10 py-2.5 transition-all outline-none"
+                  autoComplete="current-password"
+                  aria-invalid={fieldErrors.passwordLama ? true : undefined}
+                  className={`${inputClass} pr-11`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowOld(!showOld)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200"
+                  aria-label={showOld ? "Sembunyikan password" : "Tampilkan password"}
+                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-control text-ink-muted hover:text-ink"
                 >
-                  {showOld ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showOld ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
-              {fieldErrors.passwordLama && (
-                <p className="text-rose-400 text-xs mt-1">{fieldErrors.passwordLama.join(", ")}</p>
-              )}
-            </div>
+            </Field>
 
-            {/* Password Baru */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                Password Baru
-              </label>
+            <Field label="Password baru" htmlFor="gpw-baru" error={fieldErrors.passwordBaru?.join(", ")}>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <KeyRound className="w-4 h-4" />
-                </div>
                 <input
+                  id="gpw-baru"
                   type={showNew ? "text" : "password"}
                   required
                   disabled={loading}
@@ -136,31 +127,25 @@ export function GantiPasswordForm({ tujuan }: { tujuan: string }) {
                     }
                   }}
                   placeholder="Minimal 8 karakter"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-100 placeholder-slate-600 text-sm rounded-xl pl-10 pr-10 py-2.5 transition-all outline-none"
+                  autoComplete="new-password"
+                  aria-invalid={fieldErrors.passwordBaru ? true : undefined}
+                  className={`${inputClass} pr-11`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowNew(!showNew)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200"
+                  aria-label={showNew ? "Sembunyikan password" : "Tampilkan password"}
+                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-control text-ink-muted hover:text-ink"
                 >
-                  {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showNew ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
-              {fieldErrors.passwordBaru && (
-                <p className="text-rose-400 text-xs mt-1">{fieldErrors.passwordBaru.join(", ")}</p>
-              )}
-            </div>
+            </Field>
 
-            {/* Konfirmasi Password */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                Konfirmasi Password Baru
-              </label>
+            <Field label="Konfirmasi password baru" htmlFor="gpw-konfirmasi" error={fieldErrors.konfirmasi?.join(", ")}>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <CheckCircle2 className="w-4 h-4" />
-                </div>
                 <input
+                  id="gpw-konfirmasi"
                   type={showConfirm ? "text" : "password"}
                   required
                   disabled={loading}
@@ -173,41 +158,37 @@ export function GantiPasswordForm({ tujuan }: { tujuan: string }) {
                     }
                   }}
                   placeholder="Ketik ulang password baru"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-100 placeholder-slate-600 text-sm rounded-xl pl-10 pr-10 py-2.5 transition-all outline-none"
+                  autoComplete="new-password"
+                  aria-invalid={fieldErrors.konfirmasi ? true : undefined}
+                  className={`${inputClass} pr-11`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200"
+                  aria-label={showConfirm ? "Sembunyikan password" : "Tampilkan password"}
+                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-control text-ink-muted hover:text-ink"
                 >
-                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
-              {fieldErrors.konfirmasi && (
-                <p className="text-rose-400 text-xs mt-1">{fieldErrors.konfirmasi.join(", ")}</p>
-              )}
-            </div>
+            </Field>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-sm rounded-xl py-3 px-4 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50 mt-4"
-            >
+            <Button type="submit" size="lg" disabled={loading} className="mt-2 w-full">
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Menyimpan Password...</span>
+                  <Loader2 className="animate-spin" />
+                  <span>Menyimpan password…</span>
                 </>
               ) : (
                 <>
-                  <span>Simpan & Lanjutkan</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <span>Simpan & lanjutkan</span>
+                  <ArrowRight />
                 </>
               )}
-            </button>
+            </Button>
           </form>
-        </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
