@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { queries } from "@/lib/api/queries";
 import { ROUTES, redirectUntukError } from "@/contract";
 import { KatalogHargaView } from "@/components/KatalogHargaView";
+import { Alert } from "@/components/ui/feedback";
 
 /**
  * Server Component: baca sesi + katalog, lalu kirim ke KatalogHargaView (client) lewat props.
@@ -16,9 +17,7 @@ export async function KatalogHarga() {
     const redir = redirectUntukError(res.code);
     if (redir) redirect(redir);
     return (
-      <div className="p-6 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-300 text-sm">
-        {res.message}
-      </div>
+      <Alert tone="danger">{res.message}</Alert>
     );
   }
 

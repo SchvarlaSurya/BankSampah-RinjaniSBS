@@ -15,18 +15,14 @@ import {
   LIMIT,
   SetorItemSchema,
 } from "@/contract";
-import {
-  ArrowLeft,
-  ArrowDownLeft,
-  Trash2,
-  Plus,
-  Camera,
-  AlertCircle,
-  CheckCircle2,
-  Loader2,
-  Scale,
-  DollarSign,
-} from "lucide-react";
+import { ArrowLeft, Camera, Loader2, Plus, Scale, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonClass } from "@/components/ui/button";
+import { Card, CardHeader } from "@/components/ui/card";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { Alert } from "@/components/ui/feedback";
+import { PageHeader } from "@/components/ui/page";
+import { HasilTransaksi } from "@/components/hasil-transaksi";
 
 /** "1.500.000" byte -> "1,5 MB" untuk pesan ke pengguna. */
 const BATAS_FOTO = `${(LIMIT.FOTO_MAKS_BYTES / 1_000_000).toLocaleString("id-ID")} MB`;
@@ -252,32 +248,19 @@ export function SetorForm({
 
   if (successData) {
     return (
-      <div className="max-w-xl mx-auto py-12">
-        <div className="bg-slate-900 border border-emerald-500/30 rounded-3xl p-8 text-center space-y-6 shadow-2xl">
-          <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-8 h-8" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">Setor Sampah Berhasil!</h1>
-            {successData.duplikat && (
-              <p className="text-xs text-amber-400 mt-1">
-                (Transaksi ini sudah pernah diproses sebelumnya / Idemopotent)
-              </p>
-            )}
-            <p className="text-sm text-slate-400 mt-2">
-              Saldo nasabah <span className="font-semibold text-slate-200">{nasabah?.nama}</span> telah diperbarui.
-            </p>
-          </div>
-
-          <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6">
-            <span className="text-xs text-slate-400 block mb-1">Saldo Terkini Nasabah</span>
-            <span className="text-3xl font-extrabold text-emerald-400 font-mono">
-              {formatRupiah(successData.saldoBaru)}
-            </span>
-          </div>
-
-          <div className="pt-4 flex flex-col sm:flex-row gap-3">
+      <HasilTransaksi
+        judul="Setor sampah tercatat"
+        keterangan={
+          <>
+            Saldo <span className="font-medium text-ink">{nasabah?.nama}</span> sudah diperbarui.
+          </>
+        }
+        saldoBaru={successData.saldoBaru}
+        duplikat={successData.duplikat}
+        aksi={
+          <>
             <button
+              type="button"
               onClick={() => {
                 setSuccessData(null);
                 clientRequestIdRef.current = crypto.randomUUID();
@@ -285,264 +268,212 @@ export function SetorForm({
                 setFotoPreview(null);
                 setItems([{ wasteTypeId: jenisSampahList[0]?.id || "", berat: "" }]);
               }}
-              className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm rounded-xl py-3"
+              className={buttonClass("secondary", "lg")}
             >
-              Setor Lagi
+              Setor lagi
             </button>
-            <Link
-              href={`/admin/nasabah/${customerId}`}
-              className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm rounded-xl py-3 text-center"
-            >
-              Kembali ke Nasabah
+            <Link href={`/admin/nasabah/${customerId}`} className={buttonClass("primary", "lg")}>
+              Kembali ke nasabah
             </Link>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <Link
-          href={`/admin/nasabah/${customerId}`}
-          className="inline-flex items-center gap-2 text-xs font-medium text-slate-400 hover:text-emerald-400 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Batal & Kembali ke Nasabah</span>
-        </Link>
-      </div>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <Link
+        href={`/admin/nasabah/${customerId}`}
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted hover:text-ink"
+      >
+        <ArrowLeft className="size-4" aria-hidden="true" />
+        Batal, kembali ke nasabah
+      </Link>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-8 shadow-2xl">
-        <div className="flex items-center gap-4 pb-6 border-b border-slate-800">
-          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-            <ArrowDownLeft className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white">Form Penimbangan & Setor Sampah</h1>
-            {nasabah && (
-              <p className="text-xs text-slate-400 mt-1">
-                Nasabah: <span className="text-emerald-400 font-semibold">{nasabah.nama}</span> ({nasabah.username})
-              </p>
-            )}
-          </div>
-        </div>
+      <PageHeader
+        title="Setor sampah"
+        description={
+          <>
+            Nasabah <span className="font-medium text-ink">{nasabah.nama}</span> ·{" "}
+            <span className="tabular-nums">{nasabah.username}</span>
+          </>
+        }
+      />
 
-        {errorMessage && (
-          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-3">
-            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold">{errorMessage}</p>
+      {errorMessage && <Alert tone="danger">{errorMessage}</Alert>}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Barang & timbangan */}
+        <Card>
+          <CardHeader
+            title={
+              <span className="flex items-center gap-2">
+                <Scale className="size-4 text-ink-muted" aria-hidden="true" />
+                Barang & berat timbangan
+              </span>
+            }
+            actions={
+              <Button type="button" variant="secondary" onClick={handleAddItem}>
+                <Plus />
+                Tambah jenis
+              </Button>
+            }
+          />
+          <div className="space-y-4 p-5">
+            {fieldErrors["items"] && <Alert tone="danger">{fieldErrors["items"].join(", ")}</Alert>}
+
+            {items.map((item, idx) => {
+              const selectedJs = jenisSampahList.find((j) => j.id === item.wasteTypeId);
+              let estimasi = 0;
+              if (selectedJs && item.berat) {
+                try {
+                  const norm = normalisasiBerat(item.berat);
+                  estimasi = estimasiSubtotal(norm, selectedJs.hargaBeli);
+                } catch {}
+              }
+
+              return (
+                <fieldset key={idx} className="rounded-control border border-line p-4">
+                  <legend className="sr-only">Barang {idx + 1}</legend>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium text-ink-muted">Barang {idx + 1}</span>
+                    {items.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItem(idx)}
+                        className={buttonClass("ghost", "icon", "text-danger-fg hover:bg-danger-bg hover:text-danger-fg")}
+                        aria-label={`Hapus barang ${idx + 1}`}
+                      >
+                        <Trash2 />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-[1fr_12rem]">
+                    <Field
+                      label="Jenis sampah"
+                      htmlFor={`setor-jenis-${idx}`}
+                      error={fieldErrors[`items.${idx}.wasteTypeId`]?.join(", ")}
+                    >
+                      <Select
+                        id={`setor-jenis-${idx}`}
+                        value={item.wasteTypeId}
+                        onChange={(e) => handleItemChange(idx, "wasteTypeId", e.target.value)}
+                        aria-invalid={fieldErrors[`items.${idx}.wasteTypeId`] ? true : undefined}
+                      >
+                        {jenisSampahList.map((js) => (
+                          <option key={js.id} value={js.id}>
+                            {js.nama} — {formatRupiah(js.hargaBeli)}/kg
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+
+                    <Field label="Berat (kg)" htmlFor={`setor-berat-${idx}`} error={fieldErrors[`items.${idx}.berat`]?.join(", ")}>
+                      <Input
+                        id={`setor-berat-${idx}`}
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="contoh: 12.50"
+                        value={item.berat}
+                        onChange={(e) => handleItemChange(idx, "berat", e.target.value)}
+                        aria-invalid={fieldErrors[`items.${idx}.berat`] ? true : undefined}
+                        className="tabular-nums"
+                      />
+                    </Field>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between border-t border-line pt-3 text-sm">
+                    <span className="text-ink-muted">Subtotal (perkiraan)</span>
+                    <span className="font-semibold text-ink tabular-nums">{formatRupiah(estimasi)}</span>
+                  </div>
+                </fieldset>
+              );
+            })}
+
+            <div className="flex items-center justify-between rounded-control bg-brand-soft px-4 py-3">
+              <span className="text-sm font-medium text-ink">Total nilai setor (perkiraan)</span>
+              <span className="text-xl font-semibold text-ink tabular-nums">{formatRupiah(totalEstimasi)}</span>
             </div>
+            <p className="text-xs text-ink-muted">Angka final dihitung server setelah disimpan.</p>
           </div>
-        )}
+        </Card>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Items Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Scale className="w-4 h-4 text-emerald-400" />
-                Daftar Barang & Timbangan Sampah
-              </label>
-              <button
-                type="button"
-                onClick={handleAddItem}
-                className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-lg border border-emerald-500/20 transition-all"
+        {/* Foto timbangan */}
+        <Card>
+          <CardHeader
+            title={
+              <span className="flex items-center gap-2">
+                <Camera className="size-4 text-ink-muted" aria-hidden="true" />
+                Foto timbangan <span className="text-danger-fg">*</span>
+              </span>
+            }
+            description={`JPG, PNG, atau WebP, maksimal ${BATAS_FOTO}.`}
+          />
+          <div className="p-5">
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handlePhotoSelect}
+              className="sr-only"
+              id="foto-input"
+            />
+
+            {!fotoPreview ? (
+              <label
+                htmlFor="foto-input"
+                className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-control border-2 border-dashed border-line px-6 py-8 text-center transition-colors duration-150 hover:border-brand hover:bg-brand-soft"
               >
-                <Plus className="w-3.5 h-3.5" />
-                Tambah Jenis Sampah
-              </button>
-            </div>
-
-            {fieldErrors["items"] && (
-              <p className="text-xs text-rose-400 font-medium">
-                {fieldErrors["items"].join(", ")}
-              </p>
-            )}
-
-            <div className="space-y-3">
-              {items.map((item, idx) => {
-                const selectedJs = jenisSampahList.find((j) => j.id === item.wasteTypeId);
-                let estimasi = 0;
-                if (selectedJs && item.berat) {
-                  try {
-                    const norm = normalisasiBerat(item.berat);
-                    estimasi = estimasiSubtotal(norm, selectedJs.hargaBeli);
-                  } catch {}
-                }
-
-                return (
-                  <div
-                    key={idx}
-                    className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-xs font-semibold text-slate-400">Item #{idx + 1}</span>
-                      {items.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveItem(idx)}
-                          className="text-rose-400 hover:text-rose-300 p-1 hover:bg-rose-500/10 rounded-lg text-xs"
-                          title="Hapus Item"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                          Jenis Sampah
-                        </label>
-                        <select
-                          value={item.wasteTypeId}
-                          onChange={(e) => handleItemChange(idx, "wasteTypeId", e.target.value)}
-                          className={`w-full bg-slate-900 border ${
-                            fieldErrors[`items.${idx}.wasteTypeId`]
-                              ? "border-rose-500 focus:border-rose-400"
-                              : "border-slate-700 focus:border-emerald-500"
-                          } text-slate-100 text-xs rounded-xl px-3 py-2.5 outline-none`}
-                        >
-                          {jenisSampahList.map((js) => (
-                            <option key={js.id} value={js.id}>
-                              {js.nama} — {formatRupiah(js.hargaBeli)}/kg
-                            </option>
-                          ))}
-                        </select>
-                        {fieldErrors[`items.${idx}.wasteTypeId`] && (
-                          <p className="text-[11px] text-rose-400 mt-1 font-medium">
-                            {fieldErrors[`items.${idx}.wasteTypeId`].join(", ")}
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                          Berat Timbangan (kg)
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="contoh: 12.50"
-                          value={item.berat}
-                          onChange={(e) => handleItemChange(idx, "berat", e.target.value)}
-                          className={`w-full bg-slate-900 border ${
-                            fieldErrors[`items.${idx}.berat`]
-                              ? "border-rose-500 focus:border-rose-400"
-                              : "border-slate-700 focus:border-emerald-500"
-                          } text-slate-100 text-xs font-mono rounded-xl px-3 py-2.5 outline-none placeholder-slate-600`}
-                        />
-                        {fieldErrors[`items.${idx}.berat`] && (
-                          <p className="text-[11px] text-rose-400 mt-1 font-medium">
-                            {fieldErrors[`items.${idx}.berat`].join(", ")}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1 border-t border-slate-800/60 text-xs">
-                      <span className="text-slate-500 italic">Subtotal (Perkiraan):</span>
-                      <span className="font-bold font-mono text-emerald-400">
-                        {formatRupiah(estimasi)}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Total Estimated Preview */}
-            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <DollarSign className="w-4 h-4 text-emerald-400" />
-                Total Nilai Setor (Perkiraan)
-              </span>
-              <span className="text-xl font-extrabold text-emerald-400 font-mono">
-                {formatRupiah(totalEstimasi)}
-              </span>
-            </div>
-          </div>
-
-          {/* Photo Upload Section */}
-          <div className="space-y-3 pt-2">
-            <label className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-              <Camera className="w-4 h-4 text-emerald-400" />
-              Upload Foto Timbangan (Wajib)
-            </label>
-
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              <input
-                ref={photoInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handlePhotoSelect}
-                className="hidden"
-                id="foto-input"
-              />
-
-              {!fotoPreview ? (
-                <label
-                  htmlFor="foto-input"
-                  className="w-full sm:w-auto bg-slate-950 hover:bg-slate-800 border-2 border-dashed border-slate-700 hover:border-emerald-500 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer transition-all text-center group"
-                >
-                  <Camera className="w-8 h-8 text-slate-500 group-hover:text-emerald-400 mb-2 transition-colors" />
-                  <span className="text-xs font-semibold text-slate-200">Pilih Foto Timbangan</span>
-                  <span className="text-[10px] text-slate-500 mt-1">JPG, PNG, atau WebP (Maks {BATAS_FOTO})</span>
-                </label>
-              ) : (
-                <div className="flex items-center gap-4">
-                  <div className="relative w-32 h-32 rounded-2xl overflow-hidden border border-emerald-500/40 shadow-lg shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- pratinjau blob: lokal dari file yang dipilih; next/image tidak cocok. */}
-                    <img src={fotoPreview} alt="Pratinjau Foto" className="w-full h-full object-cover" />
-                    <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-slate-950/80 text-[10px] text-emerald-400 font-medium">
-                      Terlampir
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleHapusFoto}
-                    className="flex items-center gap-1.5 text-xs text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 px-3.5 py-2.5 rounded-xl border border-rose-500/20 transition-all font-medium"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Hapus Foto</span>
-                  </button>
+                <Camera className="size-6 text-ink-subtle" aria-hidden="true" />
+                <span className="text-sm font-medium text-ink">Pilih foto timbangan</span>
+                <span className="text-xs text-ink-muted">Ketuk untuk membuka kamera atau galeri</span>
+              </label>
+            ) : (
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="relative size-28 shrink-0 overflow-hidden rounded-control border border-line">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- pratinjau blob: lokal dari file yang dipilih; next/image tidak cocok. */}
+                  <img src={fotoPreview} alt="Pratinjau foto timbangan" className="size-full object-cover" />
                 </div>
-              )}
-            </div>
+                <div className="space-y-2">
+                  <Badge tone="success">Foto terlampir</Badge>
+                  <div>
+                    <button type="button" onClick={handleHapusFoto} className={buttonClass("secondary")}>
+                      <Trash2 />
+                      Hapus foto
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
+        </Card>
 
-          {/* Catatan Input */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-              Catatan (Opsional)
-            </label>
-            <textarea
+        {/* Catatan */}
+        <Card className="p-5">
+          <Field label="Catatan (opsional)" htmlFor="setor-catatan">
+            <Textarea
+              id="setor-catatan"
               rows={2}
               value={catatan}
               onChange={(e) => setCatatan(e.target.value)}
-              placeholder="Catatan tambahan mengenai kondisi timbangan atau sampah..."
-              className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 text-slate-100 placeholder-slate-600 text-xs rounded-xl p-3 outline-none"
+              placeholder="Catatan tambahan tentang timbangan atau sampah"
             />
-          </div>
+          </Field>
+        </Card>
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm rounded-xl py-3.5 px-4 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50 mt-4"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Memproses Setor Sampah...</span>
-              </>
-            ) : (
-              <span>Proses Transaksi Setor</span>
-            )}
-          </button>
-        </form>
-      </div>
+        <Button type="submit" size="lg" disabled={loading} className="w-full">
+          {loading ? (
+            <>
+              <Loader2 className="animate-spin" />
+              <span>Memproses setor…</span>
+            </>
+          ) : (
+            <span>Simpan setor</span>
+          )}
+        </Button>
+      </form>
     </div>
   );
 }

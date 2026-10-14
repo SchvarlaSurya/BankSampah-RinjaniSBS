@@ -4,15 +4,13 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import { actions } from "@/lib/api/actions";
 import { type NasabahRingkas, formatRupiah, ERROR_MESSAGES } from "@/contract";
-import {
-  ArrowLeft,
-  ArrowUpRight,
-  Wallet,
-  AlertCircle,
-  CheckCircle2,
-  Loader2,
-  DollarSign,
-} from "lucide-react";
+import { ArrowLeft, Loader2, Wallet } from "lucide-react";
+import { Button, buttonClass } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Field, Input, Textarea } from "@/components/ui/field";
+import { Alert } from "@/components/ui/feedback";
+import { PageHeader } from "@/components/ui/page";
+import { HasilTransaksi } from "@/components/hasil-transaksi";
 
 /** Data nasabah datang dari Server Component (page.tsx). */
 export function TarikForm({
@@ -83,163 +81,119 @@ export function TarikForm({
 
   if (successData) {
     return (
-      <div className="max-w-xl mx-auto py-12">
-        <div className="bg-slate-900 border border-emerald-500/30 rounded-3xl p-8 text-center space-y-6 shadow-2xl">
-          <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-8 h-8" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">Penarikan Saldo Berhasil!</h1>
-            {successData.duplikat && (
-              <p className="text-xs text-amber-400 mt-1">
-                (Transaksi ini sudah pernah diproses sebelumnya / Idempotent)
-              </p>
-            )}
-            <p className="text-sm text-slate-400 mt-2">
-              Uang tunai diserahkan ke nasabah <span className="font-semibold text-slate-200">{nasabah?.nama}</span>.
-            </p>
-          </div>
-
-          <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6">
-            <span className="text-xs text-slate-400 block mb-1">Saldo Terkini Nasabah</span>
-            <span className="text-3xl font-extrabold text-emerald-400 font-mono">
-              {formatRupiah(successData.saldoBaru)}
-            </span>
-          </div>
-
-          <div className="pt-4 flex flex-col sm:flex-row gap-3">
+      <HasilTransaksi
+        judul="Penarikan saldo tercatat"
+        keterangan={
+          <>
+            Uang tunai diserahkan ke <span className="font-medium text-ink">{nasabah?.nama}</span>.
+          </>
+        }
+        saldoBaru={successData.saldoBaru}
+        duplikat={successData.duplikat}
+        aksi={
+          <>
             <button
+              type="button"
               onClick={() => {
                 setSuccessData(null);
                 clientRequestIdRef.current = crypto.randomUUID();
                 setJumlah("");
                 setCatatan("");
               }}
-              className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm rounded-xl py-3"
+              className={buttonClass("secondary", "lg")}
             >
-              Tarik Lagi
+              Tarik lagi
             </button>
-            <Link
-              href={`/admin/nasabah/${customerId}`}
-              className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm rounded-xl py-3 text-center"
-            >
-              Kembali ke Nasabah
+            <Link href={`/admin/nasabah/${customerId}`} className={buttonClass("primary", "lg")}>
+              Kembali ke nasabah
             </Link>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
     );
   }
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <Link
-          href={`/admin/nasabah/${customerId}`}
-          className="inline-flex items-center gap-2 text-xs font-medium text-slate-400 hover:text-emerald-400 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Batal & Kembali ke Nasabah</span>
-        </Link>
-      </div>
+    <div className="mx-auto max-w-xl space-y-6">
+      <Link
+        href={`/admin/nasabah/${customerId}`}
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted hover:text-ink"
+      >
+        <ArrowLeft className="size-4" aria-hidden="true" />
+        Batal, kembali ke nasabah
+      </Link>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl">
-        <div className="flex items-center gap-4 pb-6 border-b border-slate-800">
-          <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
-            <ArrowUpRight className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white">Form Penarikan Saldo Tunai</h1>
-            {nasabah && (
-              <p className="text-xs text-slate-400 mt-1">
-                Nasabah: <span className="text-emerald-400 font-semibold">{nasabah.nama}</span> ({nasabah.username})
-              </p>
-            )}
-          </div>
-        </div>
+      <PageHeader
+        title="Tarik saldo tunai"
+        description={
+          nasabah && (
+            <>
+              Nasabah <span className="font-medium text-ink">{nasabah.nama}</span> ·{" "}
+              <span className="tabular-nums">{nasabah.username}</span>
+            </>
+          )
+        }
+      />
 
-        {/* Balance Info */}
-        {nasabah && (
-          <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 flex items-center justify-between">
-            <span className="text-xs text-slate-400 font-medium flex items-center gap-1.5">
-              <Wallet className="w-4 h-4 text-emerald-400" />
-              Saldo Rekening Saat Ini
-            </span>
-            <span className="text-xl font-extrabold text-emerald-400 font-mono">
-              {formatRupiah(nasabah.saldo)}
-            </span>
-          </div>
-        )}
+      {nasabah && (
+        <Card className="flex items-center justify-between gap-4 px-5 py-4">
+          <span className="flex items-center gap-2 text-sm text-ink-muted">
+            <Wallet className="size-4" aria-hidden="true" />
+            Saldo saat ini
+          </span>
+          <span className="text-xl font-semibold text-ink tabular-nums">{formatRupiah(nasabah.saldo)}</span>
+        </Card>
+      )}
 
-        {errorMessage && (
-          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-3">
-            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold">{errorMessage}</p>
-              {nasabah && (
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Saldo yang tersedia: <span className="font-mono font-bold text-emerald-400">{formatRupiah(nasabah.saldo)}</span>
-                </p>
-              )}
-            </div>
-          </div>
-        )}
+      {errorMessage && (
+        <Alert tone="danger" title={errorMessage}>
+          {nasabah && (
+            <>
+              Saldo tersedia: <span className="font-semibold tabular-nums">{formatRupiah(nasabah.saldo)}</span>
+            </>
+          )}
+        </Alert>
+      )}
 
+      <Card className="p-5 sm:p-6">
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Jumlah Input */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-              Jumlah Penarikan (Rp)
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                <DollarSign className="w-4 h-4" />
-              </div>
-              <input
-                type="number"
-                required
-                min={1}
-                placeholder="contoh: 50000"
-                value={jumlah}
-                onChange={(e) => setJumlah(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-100 placeholder-slate-600 text-sm font-mono rounded-xl pl-10 pr-4 py-3 outline-none"
-              />
-            </div>
-            {fieldErrors.jumlah && (
-              <p className="text-rose-400 text-xs mt-1.5">{fieldErrors.jumlah.join(", ")}</p>
-            )}
-          </div>
+          <Field label="Jumlah penarikan (Rp)" htmlFor="tarik-jumlah" required error={fieldErrors.jumlah?.join(", ")}>
+            <Input
+              id="tarik-jumlah"
+              type="number"
+              inputMode="numeric"
+              required
+              min={1}
+              placeholder="contoh: 50000"
+              value={jumlah}
+              onChange={(e) => setJumlah(e.target.value)}
+              aria-invalid={fieldErrors.jumlah ? true : undefined}
+              className="tabular-nums"
+            />
+          </Field>
 
-          {/* Catatan Input */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-              Catatan Penarikan (Opsional)
-            </label>
-            <textarea
+          <Field label="Catatan (opsional)" htmlFor="tarik-catatan">
+            <Textarea
+              id="tarik-catatan"
               rows={2}
               value={catatan}
               onChange={(e) => setCatatan(e.target.value)}
-              placeholder="Keterangan penarikan tunai..."
-              className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 text-slate-100 placeholder-slate-600 text-xs rounded-xl p-3 outline-none"
+              placeholder="Keterangan penarikan tunai"
             />
-          </div>
+          </Field>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm rounded-xl py-3.5 px-4 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50 mt-4"
-          >
+          <Button type="submit" size="lg" disabled={loading} className="w-full">
             {loading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Memproses Penarikan...</span>
+                <Loader2 className="animate-spin" />
+                <span>Memproses penarikan…</span>
               </>
             ) : (
-              <span>Konfirmasi Penarikan Tunai</span>
+              <span>Konfirmasi penarikan</span>
             )}
-          </button>
+          </Button>
         </form>
-      </div>
+      </Card>
     </div>
   );
 }

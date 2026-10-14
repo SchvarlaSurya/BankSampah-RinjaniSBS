@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { queries } from "@/lib/api/queries";
 import { redirectUntukError, TIPE_TRANSAKSI, type TipeTransaksi } from "@/contract";
-import { AlertCircle } from "lucide-react";
 import { AuditView, type FilterAudit } from "./audit-view";
+import { Alert } from "@/components/ui/feedback";
 
 type Params = { [key: string]: string | string[] | undefined };
 const teks = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
@@ -24,10 +24,7 @@ export default async function AuditTransaksiPage({ searchParams }: { searchParam
     const redir = redirectUntukError(stafRes.code);
     if (redir) redirect(redir);
     return (
-      <div className="p-6 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-300 text-sm flex items-center gap-3">
-        <AlertCircle className="w-4 h-4 shrink-0" />
-        {stafRes.message}
-      </div>
+      <Alert tone="danger">{stafRes.message}</Alert>
     );
   }
 

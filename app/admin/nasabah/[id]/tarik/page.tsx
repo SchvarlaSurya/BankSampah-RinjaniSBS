@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { queries } from "@/lib/api/queries";
 import { redirectUntukError } from "@/contract";
 import { TarikForm } from "./tarik-form";
+import { Alert } from "@/components/ui/feedback";
 
 export default async function TarikTunaiPage({
   params,
@@ -16,9 +17,7 @@ export default async function TarikTunaiPage({
     if (redir) redirect(redir);
     if (res.code === "NASABAH_TIDAK_DITEMUKAN") notFound();
     return (
-      <div className="p-6 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-300 text-sm">
-        {res.message}
-      </div>
+      <Alert tone="danger">{res.message}</Alert>
     );
   }
 

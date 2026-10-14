@@ -3,6 +3,8 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatRupiah, type JenisSampah } from "@/contract";
+import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/field";
 
 /** Filter jenis sampah: hanya mengubah ?sampah= di URL; data dibaca ulang oleh Server Component. */
 export function FilterSampah({ wasteTypes, terpilih }: { wasteTypes: JenisSampah[]; terpilih: string }) {
@@ -16,12 +18,16 @@ export function FilterSampah({ wasteTypes, terpilih }: { wasteTypes: JenisSampah
   }
 
   return (
-    <div className="flex flex-col sm:flex-row items-center gap-3">
-      <select
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <label htmlFor="filter-sampah" className="sr-only">
+        Filter jenis sampah
+      </label>
+      <Select
+        id="filter-sampah"
         value={terpilih}
         disabled={pending}
         onChange={(e) => pilih(e.target.value)}
-        className="w-full sm:w-80 bg-slate-950 border border-slate-800 text-slate-100 text-xs rounded-xl p-2.5 outline-none focus:border-emerald-500 transition-colors"
+        className="sm:w-80"
       >
         <option value="">Semua Jenis Sampah</option>
         {wasteTypes.map((w) => (
@@ -29,12 +35,12 @@ export function FilterSampah({ wasteTypes, terpilih }: { wasteTypes: JenisSampah
             {w.nama} ({formatRupiah(w.hargaBeli)}/kg)
           </option>
         ))}
-      </select>
+      </Select>
 
       {terpilih && (
-        <button onClick={() => pilih("")} className="text-xs text-slate-400 hover:text-slate-200 transition-colors">
-          Reset Filter
-        </button>
+        <Button variant="secondary" onClick={() => pilih("")}>
+          Reset filter
+        </Button>
       )}
     </div>
   );
