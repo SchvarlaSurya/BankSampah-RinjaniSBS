@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { queries } from "@/lib/api/queries";
 import { formatRupiah, redirectUntukError } from "@/contract";
-import { ArrowLeft, ArrowDownLeft, ArrowUpRight, RotateCcw, Calendar, Scale, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, ArrowDownLeft, ArrowUpRight, RotateCcw, Scale, SlidersHorizontal } from "lucide-react";
 
 export default async function NasabahTransaksiDetailPage({
   params,

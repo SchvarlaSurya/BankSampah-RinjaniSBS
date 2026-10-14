@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { actions } from "@/lib/api/actions";
 import {
-  type PenggunaDetail,
   type HalamanPengguna,
   ERROR_MESSAGES,
   type SesiInfo,
@@ -19,7 +18,6 @@ import {
   CheckCircle2,
   Sparkles,
   RefreshCw,
-  ShieldCheck,
   Building2,
   Hash,
   Copy,
@@ -28,7 +26,6 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
-  Filter,
 } from "lucide-react";
 import ResetPasswordDialog from "@/components/ResetPasswordDialog";
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { queries } from "@/lib/api/queries";
 import { KatalogHarga } from "@/components/katalog-harga";
-import { Recycle, ArrowLeft, LogIn, LayoutDashboard } from "lucide-react";
+import { Recycle, LogIn, LayoutDashboard } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 

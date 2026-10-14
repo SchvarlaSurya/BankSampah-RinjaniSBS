@@ -334,6 +334,7 @@ export function AuditView({
                         Foto Timbangan
                       </span>
                       <div className="w-full h-44 rounded-2xl overflow-hidden border border-slate-800 bg-slate-950">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- URL foto bertanda tangan berumur 5 menit; next/image tidak cocok. */}
                         <img
                           src={tx.fotoUrl}
                           alt={`Foto timbangan transaksi ${tx.id}`}

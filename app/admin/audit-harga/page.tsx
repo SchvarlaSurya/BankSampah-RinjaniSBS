@@ -15,7 +15,6 @@ import {
   AlertCircle,
   TrendingUp,
   TrendingDown,
-  ArrowRight,
   ShieldCheck,
   Calendar,
   User,

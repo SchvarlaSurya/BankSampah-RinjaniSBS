@@ -493,6 +493,7 @@ export function SetorForm({
               ) : (
                 <div className="flex items-center gap-4">
                   <div className="relative w-32 h-32 rounded-2xl overflow-hidden border border-emerald-500/40 shadow-lg shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- pratinjau blob: lokal dari file yang dipilih; next/image tidak cocok. */}
                     <img src={fotoPreview} alt="Pratinjau Foto" className="w-full h-full object-cover" />
                     <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-slate-950/80 text-[10px] text-emerald-400 font-medium">
                       Terlampir

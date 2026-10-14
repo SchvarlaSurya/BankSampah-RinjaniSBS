@@ -187,6 +187,7 @@ export default async function TransaksiDetailPage({
               Foto Timbangan Terlampir
             </h3>
             <div className="w-full max-w-sm rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 p-2">
+              {/* eslint-disable-next-line @next/next/no-img-element -- URL foto bertanda tangan berumur 5 menit; next/image tidak cocok. */}
               <img
                 src={tx.fotoUrl}
                 alt="Foto timbangan"
