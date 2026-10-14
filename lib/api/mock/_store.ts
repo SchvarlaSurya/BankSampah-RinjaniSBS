@@ -39,6 +39,8 @@ interface MockState {
   transaksi: TransaksiDetail[];
   /** clientRequestId -> transaksiId (idempotensi) */
   clientRequestIndex: Map<string, IdStr>;
+  /** SHA-256 foto setor -> transaksiId (foto tidak boleh dipakai dua kali). */
+  hashFoto: Map<string, IdStr>;
 }
 
 function buatState(): MockState {
@@ -172,6 +174,7 @@ function buatState(): MockState {
     dibuatPada: new Map(semuaUser.map((u) => [u.id, "2024-08-01T00:00:00.000Z"])),
     transaksi,
     clientRequestIndex: new Map(),
+    hashFoto: new Map(),
   };
 }
 

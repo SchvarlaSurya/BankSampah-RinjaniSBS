@@ -32,6 +32,7 @@ import type {
   SetStatusPenggunaInput,
   SimpanJenisSampahInput,
   TarikInput,
+  TipeTransaksi,
   TransaksiDetail,
   UserId,
 } from "@/contract";
@@ -39,6 +40,8 @@ import {
   ok,
   fail,
   failDariZod,
+  FOTO_MIME,
+  LIMIT,
   normalisasiBerat,
   estimasiSubtotal,
   parseSetorFormData,
@@ -54,23 +57,53 @@ import {
   KoreksiInputSchema,
   PenyesuaianInputSchema,
 } from "@/contract";
+import { createHash, randomInt } from "node:crypto";
+import { guard } from "./_guard";
 import { store, nextId, nowIso } from "./_store";
 
 /** Delay palsu (50ms). */
 const delay = () => new Promise<void>((r) => setTimeout(r, 50));
 
-/** Generate password sementara 8 karakter alfanumerik. */
+/** Password sementara seperti backend: 10 karakter, crypto.randomInt, tanpa 0/O/1/l/I. */
+const ALFABET_PASSWORD = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 function genPassword(): string {
-  return Math.random().toString(36).slice(2, 10).padEnd(8, "0");
+  let hasil = "";
+  for (let i = 0; i < 10; i++) hasil += ALFABET_PASSWORD[randomInt(ALFABET_PASSWORD.length)];
+  return hasil;
 }
 
-/** Idempotensi: clientRequestId yang sudah diproses -> transaksi aslinya. */
-function hasilDuplikat(clientRequestId: string): ActionResult<MutasiResult> | null {
+/**
+ * Idempotensi (seperti cek_request_ulang di SQL): clientRequestId yang sudah diproses ->
+ * transaksi aslinya; dipakai untuk operasi/nasabah/petugas lain -> VALIDASI_GAGAL.
+ */
+function hasilDuplikat(
+  clientRequestId: string,
+  harap: { tipe: TipeTransaksi; customerId: string | undefined; adminId: string; membalikId: string | null },
+): ActionResult<MutasiResult> | null {
   const existingId = store.clientRequestIndex.get(clientRequestId);
   const existing = existingId && store.transaksi.find((t) => t.id === existingId);
   if (!existing) return null;
+  if (
+    existing.tipe !== harap.tipe ||
+    existing.customerId !== harap.customerId ||
+    existing.dibuatOlehId !== harap.adminId ||
+    existing.membalikId !== harap.membalikId
+  ) {
+    return fail("VALIDASI_GAGAL");
+  }
   const n = store.nasabah.find((x) => x.id === existing.customerId);
   return ok({ transaksi: existing, saldoBaru: n ? n.saldo : 0, duplikat: true });
+}
+
+/** Foto: tipe yang diklaim harus cocok dengan isi (magic bytes), maks LIMIT.FOTO_MAKS_BYTES. */
+function fotoValid(bytes: Uint8Array, mime: string): boolean {
+  if (bytes.length === 0 || bytes.length > LIMIT.FOTO_MAKS_BYTES) return false;
+  if (!(FOTO_MIME as readonly string[]).includes(mime)) return false;
+  const awal = (...b: number[]) => b.every((x, i) => bytes[i] === x);
+  if (mime === "image/jpeg") return awal(0xff, 0xd8, 0xff);
+  if (mime === "image/png") return awal(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a);
+  const teks = (a: number, b: number) => String.fromCharCode(...bytes.slice(a, b));
+  return teks(0, 4) === "RIFF" && teks(8, 12) === "WEBP";
 }
 
 // ── Auth ────────────────────────────────────────────────────────────────────
@@ -107,14 +140,17 @@ export async function login(input: LoginInput): Promise<ActionResult<SesiInfo>> 
 
 export async function logout(): Promise<ActionResult<null>> {
   await delay();
+  const g = guard("logout");
+  if (!g.ok) return g.hasil;
   store.sesi = null;
   return ok(null);
 }
 
 export async function gantiPassword(input: GantiPasswordInput): Promise<ActionResult<null>> {
   await delay();
-  const sesi = store.sesi;
-  if (!sesi) return fail("TIDAK_LOGIN");
+  const g = guard("gantiPassword");
+  if (!g.ok) return g.hasil;
+  const sesi = g.sesi;
   const parsed = GantiPasswordInputSchema.safeParse(input);
   if (!parsed.success) return failDariZod(parsed.error);
 
@@ -133,9 +169,9 @@ export async function gantiPassword(input: GantiPasswordInput): Promise<ActionRe
 
 export async function buatPengguna(input: BuatPenggunaInput): Promise<ActionResult<PenggunaBaruResult>> {
   await delay();
-  const sesi = store.sesi;
-  if (!sesi) return fail("TIDAK_LOGIN");
-  if (sesi.role === "nasabah") return fail("TIDAK_DIIZINKAN");
+  const g = guard("buatPengguna");
+  if (!g.ok) return g.hasil;
+  const sesi = g.sesi;
 
   const parsed = BuatPenggunaInputSchema.safeParse(input);
   if (!parsed.success) return failDariZod(parsed.error);
@@ -182,9 +218,8 @@ export async function buatPengguna(input: BuatPenggunaInput): Promise<ActionResu
 
 export async function getLatestIdByRt(input: GetLatestIdByRtInput): Promise<ActionResult<LatestIdByRtResult>> {
   await delay();
-  const sesi = store.sesi;
-  if (!sesi) return fail("TIDAK_LOGIN");
-  if (sesi.role === "nasabah") return fail("TIDAK_DIIZINKAN");
+  const g = guard("getLatestIdByRt");
+  if (!g.ok) return g.hasil;
   const parsed = GetLatestIdByRtInputSchema.safeParse(input);
   if (!parsed.success) return failDariZod(parsed.error);
   const rt = parsed.data.rtNumber.padStart(2, "0");
@@ -198,9 +233,8 @@ export async function getLatestIdByRt(input: GetLatestIdByRtInput): Promise<Acti
 
 export async function resetPasswordPengguna(input: ResetPasswordInput): Promise<ActionResult<ResetPasswordResult>> {
   await delay();
-  const sesi = store.sesi;
-  if (!sesi) return fail("TIDAK_LOGIN");
-  if (sesi.role !== "super_admin") return fail("TIDAK_DIIZINKAN");
+  const g = guard("resetPasswordPengguna");
+  if (!g.ok) return g.hasil;
 
   const parsed = ResetPasswordInputSchema.safeParse(input);
   if (!parsed.success) return failDariZod(parsed.error);
@@ -216,14 +250,14 @@ export async function resetPasswordPengguna(input: ResetPasswordInput): Promise<
 
 export async function setStatusPengguna(input: SetStatusPenggunaInput): Promise<ActionResult<PenggunaRingkas>> {
   await delay();
-  const sesi = store.sesi;
-  if (!sesi) return fail("TIDAK_LOGIN");
-  if (sesi.role !== "super_admin") return fail("TIDAK_DIIZINKAN");
+  const g = guard("setStatusPengguna");
+  if (!g.ok) return g.hasil;
+  const sesi = g.sesi;
 
   const parsed = SetStatusPenggunaInputSchema.safeParse(input);
   if (!parsed.success) return failDariZod(parsed.error);
 
-  if (parsed.data.userId === sesi.userId) {
+  if (parsed.data.userId === sesi.userId && !parsed.data.aktif) {
     return fail("TIDAK_BISA_NONAKTIFKAN_DIRI");
   }
 
@@ -252,13 +286,17 @@ export async function setStatusPengguna(input: SetStatusPenggunaInput): Promise<
 
 export async function simpanJenisSampah(input: SimpanJenisSampahInput): Promise<ActionResult<JenisSampah>> {
   await delay();
-  const sesi = store.sesi;
-  if (!sesi) return fail("TIDAK_LOGIN");
-  if (sesi.role === "nasabah") return fail("TIDAK_DIIZINKAN");
+  const g = guard("simpanJenisSampah");
+  if (!g.ok) return g.hasil;
+  const sesi = g.sesi;
 
   const parsed = SimpanJenisSampahInputSchema.safeParse(input);
   if (!parsed.success) return failDariZod(parsed.error);
   const { id, nama, hargaBeli, hargaJual, aktif } = parsed.data;
+  const kunci = (v: string) => v.trim().toLowerCase();
+  if (store.jenisSampah.some((j) => j.id !== id && kunci(j.nama) === kunci(nama))) {
+    return fail("VALIDASI_GAGAL", { fieldErrors: { nama: ["Nama jenis sampah sudah dipakai"] } });
+  }
 
   const catat = (j: JenisSampah, hargaLama: number) => {
     const waktu = nowIso();
@@ -299,20 +337,29 @@ export async function updateHargaSampah(input: SimpanJenisSampahInput): Promise<
 
 export async function setor(formData: FormData): Promise<ActionResult<MutasiResult>> {
   await delay();
-  const sesi = store.sesi;
-  if (!sesi) return fail("TIDAK_LOGIN");
-  if (sesi.role === "nasabah") return fail("TIDAK_DIIZINKAN");
+  const g = guard("setor");
+  if (!g.ok) return g.hasil;
+  const sesi = g.sesi;
 
   const { payload, foto } = parseSetorFormData(formData);
-  if (!foto) return fail("FOTO_WAJIB");
-  // Jejak dev: bukti File dari buildSetorFormData sampai di server (tanpa nama file).
-  console.info(`[mock setor] foto diterima di server: File type=${foto.type} size=${foto.size}`);
-
   const parsed = SetorInputSchema.safeParse(payload);
   if (!parsed.success) return failDariZod(parsed.error);
+  if (!foto) return fail("FOTO_WAJIB");
+  const bytes = new Uint8Array(await foto.arrayBuffer());
+  if (!fotoValid(bytes, foto.type)) return fail("FOTO_TIDAK_VALID");
 
-  const duplikat = hasilDuplikat(parsed.data.clientRequestId);
+  const duplikat = hasilDuplikat(parsed.data.clientRequestId, {
+    tipe: "setor",
+    customerId: parsed.data.customerId,
+    adminId: sesi.userId,
+    membalikId: null,
+  });
   if (duplikat) return duplikat;
+
+  // Foto yang sama hanya boleh dipakai lagi bila setor sebelumnya sudah dikoreksi.
+  const hash = createHash("sha256").update(bytes).digest("hex");
+  const pemakai = store.hashFoto.get(hash);
+  if (pemakai && !store.transaksi.find((t) => t.id === pemakai)?.sudahDibalik) return fail("FOTO_SUDAH_DIPAKAI");
 
   const nasabah = store.nasabah.find((n) => n.id === parsed.data.customerId);
   if (!nasabah) return fail("NASABAH_TIDAK_DITEMUKAN");
@@ -357,6 +404,7 @@ export async function setor(formData: FormData): Promise<ActionResult<MutasiResu
 
   store.transaksi.push(newTransaksi);
   store.clientRequestIndex.set(parsed.data.clientRequestId, newTransaksi.id);
+  store.hashFoto.set(hash, newTransaksi.id);
   nasabah.saldo += totalJumlah;
 
   return ok({
@@ -368,19 +416,24 @@ export async function setor(formData: FormData): Promise<ActionResult<MutasiResu
 
 export async function tarik(input: TarikInput): Promise<ActionResult<MutasiResult>> {
   await delay();
-  const sesi = store.sesi;
-  if (!sesi) return fail("TIDAK_LOGIN");
-  if (sesi.role === "nasabah") return fail("TIDAK_DIIZINKAN");
+  const g = guard("tarik");
+  if (!g.ok) return g.hasil;
+  const sesi = g.sesi;
 
   const parsed = TarikInputSchema.safeParse(input);
   if (!parsed.success) return failDariZod(parsed.error);
 
-  const duplikat = hasilDuplikat(parsed.data.clientRequestId);
+  const duplikat = hasilDuplikat(parsed.data.clientRequestId, {
+    tipe: "tarik",
+    customerId: parsed.data.customerId,
+    adminId: sesi.userId,
+    membalikId: null,
+  });
   if (duplikat) return duplikat;
 
+  // Nasabah nonaktif tetap boleh ditarik (sisa saldo hak nasabah), sama dengan backend.
   const nasabah = store.nasabah.find((n) => n.id === parsed.data.customerId);
   if (!nasabah) return fail("NASABAH_TIDAK_DITEMUKAN");
-  if (!nasabah.aktif) return fail("NASABAH_NONAKTIF");
 
   if (nasabah.saldo < parsed.data.jumlah) {
     return fail("SALDO_TIDAK_CUKUP");
@@ -418,14 +471,19 @@ export async function tarik(input: TarikInput): Promise<ActionResult<MutasiResul
 
 export async function koreksi(input: KoreksiInput): Promise<ActionResult<MutasiResult>> {
   await delay();
-  const sesi = store.sesi;
-  if (!sesi) return fail("TIDAK_LOGIN");
-  if (sesi.role !== "super_admin") return fail("TIDAK_DIIZINKAN");
+  const g = guard("koreksi");
+  if (!g.ok) return g.hasil;
+  const sesi = g.sesi;
 
   const parsed = KoreksiInputSchema.safeParse(input);
   if (!parsed.success) return failDariZod(parsed.error);
 
-  const duplikat = hasilDuplikat(parsed.data.clientRequestId);
+  const duplikat = hasilDuplikat(parsed.data.clientRequestId, {
+    tipe: "koreksi",
+    customerId: store.transaksi.find((t) => t.id === parsed.data.transaksiId)?.customerId,
+    adminId: sesi.userId,
+    membalikId: parsed.data.transaksiId,
+  });
   if (duplikat) return duplikat;
 
   const asal = store.transaksi.find((t) => t.id === parsed.data.transaksiId);
@@ -476,14 +534,19 @@ export async function koreksi(input: KoreksiInput): Promise<ActionResult<MutasiR
 
 export async function sesuaikanSaldo(input: PenyesuaianInput): Promise<ActionResult<MutasiResult>> {
   await delay();
-  const sesi = store.sesi;
-  if (!sesi) return fail("TIDAK_LOGIN");
-  if (sesi.role === "nasabah") return fail("TIDAK_DIIZINKAN");
+  const g = guard("sesuaikanSaldo");
+  if (!g.ok) return g.hasil;
+  const sesi = g.sesi;
 
   const parsed = PenyesuaianInputSchema.safeParse(input);
   if (!parsed.success) return failDariZod(parsed.error);
 
-  const duplikat = hasilDuplikat(parsed.data.clientRequestId);
+  const duplikat = hasilDuplikat(parsed.data.clientRequestId, {
+    tipe: "penyesuaian",
+    customerId: parsed.data.customerId,
+    adminId: sesi.userId,
+    membalikId: null,
+  });
   if (duplikat) return duplikat;
 
   const nasabah = store.nasabah.find((n) => n.id === parsed.data.customerId);
