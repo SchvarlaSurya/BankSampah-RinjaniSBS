@@ -14,6 +14,8 @@ import type {
   ActionResult,
   BuatPenggunaInput,
   GantiPasswordInput,
+  GetLatestIdByRtInput,
+  LatestIdByRtResult,
   JenisSampah,
   KoreksiInput,
   LoginInput,
@@ -41,6 +43,7 @@ import {
   parseSetorFormData,
   LoginInputSchema,
   GantiPasswordInputSchema,
+  GetLatestIdByRtInputSchema,
   BuatPenggunaInputSchema,
   ResetPasswordInputSchema,
   SetStatusPenggunaInputSchema,
@@ -130,10 +133,11 @@ export async function buatPengguna(input: BuatPenggunaInput): Promise<ActionResu
   await delay();
   const sesi = store.sesi;
   if (!sesi) return fail("TIDAK_LOGIN");
-  if (sesi.role !== "super_admin") return fail("TIDAK_DIIZINKAN");
+  if (sesi.role === "nasabah") return fail("TIDAK_DIIZINKAN");
 
   const parsed = BuatPenggunaInputSchema.safeParse(input);
   if (!parsed.success) return failDariZod(parsed.error);
+  if (sesi.role === "admin" && parsed.data.role !== "nasabah") return fail("TIDAK_DIIZINKAN");
 
   if (store.usersByUsername.has(parsed.data.username)) {
     return fail("USERNAME_SUDAH_ADA");
@@ -144,6 +148,7 @@ export async function buatPengguna(input: BuatPenggunaInput): Promise<ActionResu
 
   store.passwords.set(userId, passwordSementara);
   store.mustChangePassword.set(userId, true);
+  store.dibuatPada.set(userId, nowIso());
 
   const pengguna: PenggunaRingkas = {
     id: userId,
@@ -171,6 +176,22 @@ export async function buatPengguna(input: BuatPenggunaInput): Promise<ActionResu
   }
 
   return ok({ pengguna, passwordSementara });
+}
+
+export async function getLatestIdByRt(input: GetLatestIdByRtInput): Promise<ActionResult<LatestIdByRtResult>> {
+  await delay();
+  const sesi = store.sesi;
+  if (!sesi) return fail("TIDAK_LOGIN");
+  if (sesi.role === "nasabah") return fail("TIDAK_DIIZINKAN");
+  const parsed = GetLatestIdByRtInputSchema.safeParse(input);
+  if (!parsed.success) return failDariZod(parsed.error);
+  const rt = parsed.data.rtNumber.padStart(2, "0");
+  const pola = new RegExp(`^${rt}(\\d{2,6})$`);
+  const count = store.nasabah.reduce((maks, n) => {
+    const m = pola.exec(n.username);
+    return m ? Math.max(maks, Number(m[1])) : maks;
+  }, 0);
+  return ok({ nextId: `${rt}${String(count + 1).padStart(2, "0")}`, rt, count });
 }
 
 export async function resetPasswordPengguna(input: ResetPasswordInput): Promise<ActionResult<ResetPasswordResult>> {
@@ -231,31 +252,45 @@ export async function simpanJenisSampah(input: SimpanJenisSampahInput): Promise<
   await delay();
   const sesi = store.sesi;
   if (!sesi) return fail("TIDAK_LOGIN");
-  if (sesi.role !== "super_admin") return fail("TIDAK_DIIZINKAN");
+  if (sesi.role === "nasabah") return fail("TIDAK_DIIZINKAN");
 
   const parsed = SimpanJenisSampahInputSchema.safeParse(input);
   if (!parsed.success) return failDariZod(parsed.error);
+  const { id, nama, hargaBeli, hargaJual, aktif } = parsed.data;
 
-  if (parsed.data.id) {
-    const idx = store.jenisSampah.findIndex((j) => j.id === parsed.data.id);
-    if (idx === -1) return fail("JENIS_SAMPAH_TIDAK_VALID");
-    store.jenisSampah[idx] = {
-      ...store.jenisSampah[idx],
-      nama: parsed.data.nama,
-      hargaBeli: parsed.data.hargaBeli,
-      aktif: parsed.data.aktif,
-    };
-    return ok(store.jenisSampah[idx]);
+  const catat = (j: JenisSampah, hargaLama: number) => {
+    const waktu = nowIso();
+    store.riwayatHarga.push({
+      id: `rh-${nextId()}`,
+      sampahId: j.id,
+      sampahNama: j.nama,
+      hargaLama,
+      hargaBaru: j.hargaBeli,
+      diubahOlehId: sesi.userId,
+      diubahOlehNama: sesi.nama,
+      diubahOlehUsername: sesi.username,
+      createdAt: waktu,
+    });
+    j.terakhirDiubah = { waktu, hargaLama, hargaBaru: j.hargaBeli, diubahOlehNama: sesi.nama };
+  };
+
+  if (id) {
+    const lama = store.jenisSampah.find((j) => j.id === id);
+    if (!lama) return fail("JENIS_SAMPAH_TIDAK_VALID");
+    const hargaLama = lama.hargaBeli;
+    Object.assign(lama, { nama, hargaBeli, aktif, ...(hargaJual !== undefined ? { hargaJual } : {}) });
+    if (hargaLama !== hargaBeli) catat(lama, hargaLama);
+    return ok(lama);
   }
 
-  const newJs: JenisSampah = {
-    id: nextId(),
-    nama: parsed.data.nama,
-    hargaBeli: parsed.data.hargaBeli,
-    aktif: parsed.data.aktif,
-  };
+  const newJs: JenisSampah = { id: nextId(), nama, hargaBeli, hargaJual: hargaJual ?? null, aktif, terakhirDiubah: null };
   store.jenisSampah.push(newJs);
+  catat(newJs, 0);
   return ok(newJs);
+}
+
+export async function updateHargaSampah(input: SimpanJenisSampahInput): Promise<ActionResult<JenisSampah>> {
+  return simpanJenisSampah(input);
 }
 
 // ── Transaksi ───────────────────────────────────────────────────────────────

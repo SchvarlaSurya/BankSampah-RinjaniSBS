@@ -5,7 +5,7 @@
 
 import "server-only";
 import { isAPIError } from "better-auth/api";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import {
   type ActionResult,
@@ -34,6 +34,9 @@ import {
   SetorInputSchema,
   SimpanJenisSampahInputSchema,
   type SimpanJenisSampahInput,
+  GetLatestIdByRtInputSchema,
+  type GetLatestIdByRtInput,
+  type LatestIdByRtResult,
   type TarikInput,
   TarikInputSchema,
 } from "@/contract";
@@ -41,11 +44,11 @@ import { idKeNumber } from "../angka";
 import { auth } from "../auth";
 import { db } from "../db";
 import { user } from "../db/auth-schema";
-import { wasteTypes } from "../db/schema";
+import { priceHistory, wasteTypes } from "../db/schema";
 import { constraintUnik, logServer, pgErrorDari, petaErrorDb } from "../errors";
 import { fotoStorage } from "../foto/storage";
 import { periksaFoto } from "../foto/validasi";
-import type { SesiServer } from "../guards";
+import type { NamaAkses, SesiServer } from "../guards";
 import { ipKlien } from "../ip";
 import { mulaiPercobaan, percobaanBerhasil, percobaanGagal } from "../login-limit";
 import { itemsKeJson, panggilLedger } from "../ledger";
@@ -190,10 +193,12 @@ async function penggunaRingkas(userId: string): Promise<PenggunaRingkas | null> 
 }
 
 export async function buatPengguna(input: BuatPenggunaInput): Promise<ActionResult<PenggunaBaruResult>> {
-  return jalankan("buatPengguna", async () => {
+  return jalankan("buatPengguna", async (sesi) => {
     const parsed = BuatPenggunaInputSchema.safeParse(input);
     if (!parsed.success) return failDariZod(parsed.error);
     const { role, username, nama } = parsed.data;
+    // Admin hanya boleh membuat nasabah; akun admin dibuat super_admin.
+    if (sesi.role === "admin" && role !== "nasabah") return fail("TIDAK_DIIZINKAN");
 
     const [ada] = await db.select({ id: user.id }).from(user).where(eq(user.username, username));
     if (ada) return fail("USERNAME_SUDAH_ADA");
@@ -213,6 +218,25 @@ export async function buatPengguna(input: BuatPenggunaInput): Promise<ActionResu
     const pengguna = await penggunaRingkas(userId);
     if (!pengguna) throw new Error("pengguna baru tidak terbaca");
     return ok({ pengguna, passwordSementara });
+  });
+}
+
+/**
+ * ID nasabah berikutnya untuk satu RT: 2 digit RT + nomor urut (minimal 2 digit) setelah nomor
+ * tertinggi yang sudah dipakai nasabah di RT itu. Hanya saran untuk form; buatPengguna tetap
+ * menolak username yang sudah ada.
+ */
+export async function getLatestIdByRt(input: GetLatestIdByRtInput): Promise<ActionResult<LatestIdByRtResult>> {
+  return jalankan("getLatestIdByRt", async () => {
+    const parsed = GetLatestIdByRtInputSchema.safeParse(input);
+    if (!parsed.success) return failDariZod(parsed.error);
+    const rt = parsed.data.rtNumber.padStart(2, "0");
+    const [r] = await db
+      .select({ maks: sql<number>`coalesce(max(substring(${user.username} from 3)::int), 0)::int` })
+      .from(user)
+      .where(and(eq(user.role, "nasabah"), sql`${user.username} ~ ${`^${rt}[0-9]{2,6}$`}`));
+    const count = r?.maks ?? 0;
+    return ok({ nextId: `${rt}${String(count + 1).padStart(2, "0")}`, rt, count });
   });
 }
 
@@ -247,24 +271,43 @@ export async function setStatusPengguna(input: SetStatusPenggunaInput): Promise<
 
 // ─── Jenis sampah (super_admin) ─────────────────────────────────────────────
 
-export async function simpanJenisSampah(input: SimpanJenisSampahInput): Promise<ActionResult<JenisSampah>> {
-  return jalankan("simpanJenisSampah", async () => {
+/**
+ * Buat (tanpa id) atau ubah (dengan id) jenis sampah. Perubahan harga beli (termasuk pembuatan,
+ * harga lama 0) dicatat ke price_history dalam transaksi yang sama. hargaJual tidak dikirim =
+ * tidak diubah.
+ */
+function simpanJenisSampahSebagai(nama: NamaAkses, input: SimpanJenisSampahInput): Promise<ActionResult<JenisSampah>> {
+  return jalankan(nama, async (sesi) => {
     const parsed = SimpanJenisSampahInputSchema.safeParse(input);
     if (!parsed.success) return failDariZod(parsed.error);
-    const { id, nama, hargaBeli, aktif } = parsed.data;
+    const { id, hargaBeli, hargaJual, aktif } = parsed.data;
+    const data = { nama: parsed.data.nama, hargaBeli, aktif, ...(hargaJual !== undefined ? { hargaJual } : {}) };
 
     try {
-      let row: { id: number; nama: string; hargaBeli: number; aktif: boolean } | undefined;
-      if (id === undefined) {
-        [row] = await db.insert(wasteTypes).values({ nama, hargaBeli, aktif }).returning();
-      } else {
-        const idNum = idKeNumber(id);
-        if (idNum !== null) {
-          [row] = await db.update(wasteTypes).set({ nama, hargaBeli, aktif }).where(eq(wasteTypes.id, idNum)).returning();
+      const row = await db.transaction(async (tx) => {
+        if (id === undefined) {
+          const [baru] = await tx.insert(wasteTypes).values(data).returning();
+          await tx.insert(priceHistory).values({ sampahId: baru.id, hargaLama: 0, hargaBaru: baru.hargaBeli, diubahOleh: sesi.userId });
+          return baru;
         }
-        if (!row) return fail("JENIS_SAMPAH_TIDAK_VALID");
-      }
-      return ok({ id: String(row.id), nama: row.nama, hargaBeli: row.hargaBeli, aktif: row.aktif });
+        const idNum = idKeNumber(id);
+        if (idNum === null) return undefined;
+        const [lama] = await tx
+          .select({ hargaBeli: wasteTypes.hargaBeli })
+          .from(wasteTypes)
+          .where(eq(wasteTypes.id, idNum))
+          .for("update");
+        if (!lama) return undefined;
+        const [baru] = await tx.update(wasteTypes).set(data).where(eq(wasteTypes.id, idNum)).returning();
+        if (lama.hargaBeli !== baru.hargaBeli) {
+          await tx
+            .insert(priceHistory)
+            .values({ sampahId: baru.id, hargaLama: lama.hargaBeli, hargaBaru: baru.hargaBeli, diubahOleh: sesi.userId });
+        }
+        return baru;
+      });
+      if (!row) return fail("JENIS_SAMPAH_TIDAK_VALID");
+      return ok({ id: String(row.id), nama: row.nama, hargaBeli: row.hargaBeli, hargaJual: row.hargaJual, aktif: row.aktif });
     } catch (e) {
       if (constraintUnik(e) === "waste_types_nama_unique") {
         return fail("VALIDASI_GAGAL", { fieldErrors: { nama: ["Nama jenis sampah sudah dipakai"] } });
@@ -272,6 +315,14 @@ export async function simpanJenisSampah(input: SimpanJenisSampahInput): Promise<
       throw e;
     }
   });
+}
+
+export async function simpanJenisSampah(input: SimpanJenisSampahInput): Promise<ActionResult<JenisSampah>> {
+  return simpanJenisSampahSebagai("simpanJenisSampah", input);
+}
+
+export async function updateHargaSampah(input: SimpanJenisSampahInput): Promise<ActionResult<JenisSampah>> {
+  return simpanJenisSampahSebagai("updateHargaSampah", input);
 }
 
 // ─── Ledger (setor, tarik, koreksi) ─────────────────────────────────────────

@@ -1,5 +1,5 @@
 /**
- * src/contract/index.ts
+ * contract/index.ts
  *
  * KONTRAK BACKEND <-> FRONTEND — Bank Sampah, Fase 1
  * Versi: 1.0
@@ -276,17 +276,17 @@ export const LoginInputSchema = z.object({
 
 export const GantiPasswordInputSchema = z
   .object({
-    passwordLama: z.string().min(1, "Wajib diisi").max(LIMIT.PASSWORD_MAKS),
+    passwordLama: z.string().min(1, "Password saat ini wajib diisi").max(LIMIT.PASSWORD_MAKS),
     passwordBaru,
-    konfirmasi: z.string(),
+    konfirmasi: z.string().min(1, "Konfirmasi password wajib diisi"),
   })
   .refine((v) => v.passwordBaru === v.konfirmasi, {
     path: ["konfirmasi"],
-    message: "Konfirmasi tidak sama",
+    message: "Konfirmasi password baru tidak sama",
   })
   .refine((v) => v.passwordBaru !== v.passwordLama, {
     path: ["passwordBaru"],
-    message: "Password baru tidak boleh sama dengan yang lama",
+    message: "Password baru tidak boleh sama dengan password saat ini",
   });
 
 // --- Pengguna (Super Admin) ---
@@ -303,6 +303,22 @@ export const BuatPenggunaInputSchema = z.object({
 export const ResetPasswordInputSchema = z.object({ userId });
 export const SetStatusPenggunaInputSchema = z.object({ userId, aktif: z.boolean() });
 
+export const ListPenggunaInputSchema = z.object({
+  search: z.string().trim().max(64).optional(),
+  /** Filter role. Untuk admin diabaikan: server memaksa "nasabah". */
+  role: z.enum(ROLES).optional(),
+  /** Prefix RT, misal "01". Hanya relevan untuk nasabah (ID nasabah = RT 2 digit + nomor urut). */
+  rt: z.string().trim().regex(/^\d{1,2}$/, "RT berupa 1-2 angka").optional(),
+  aktif: z.boolean().optional(),
+  limit: z.number().int().min(1).max(100).default(20),
+  offset: z.number().int().min(0).default(0),
+});
+
+/** ID nasabah = 2 digit RT + nomor urut 2 digit (contoh "0103"). */
+export const GetLatestIdByRtInputSchema = z.object({
+  rtNumber: z.string().trim().regex(/^\d{1,2}$/, "RT berupa 1-2 angka"),
+});
+
 // --- Nasabah & jenis sampah ---
 export const CariNasabahInputSchema = z.object({
   query: z.string().trim().min(2, "Minimal 2 karakter").max(64),
@@ -313,7 +329,13 @@ export const SimpanJenisSampahInputSchema = z.object({
   id: idStr.optional(), // kosong = buat baru
   nama: z.string().trim().min(2, "Terlalu pendek").max(60),
   hargaBeli: z.number().int().min(1).max(LIMIT.MAKS_HARGA_BELI_PER_KG),
+  /** Harga jual ke lapak per kg. null = belum diatur; tidak dikirim = tidak diubah. */
+  hargaJual: z.number().int().min(1).max(LIMIT.MAKS_HARGA_BELI_PER_KG).nullable().optional(),
   aktif: z.boolean(),
+});
+
+export const RiwayatHargaInputSchema = z.object({
+  sampahId: idStr.optional(),
 });
 
 // --- Transaksi ---
@@ -372,6 +394,9 @@ export type GantiPasswordInput = z.input<typeof GantiPasswordInputSchema>;
 export type BuatPenggunaInput = z.input<typeof BuatPenggunaInputSchema>;
 export type ResetPasswordInput = z.input<typeof ResetPasswordInputSchema>;
 export type SetStatusPenggunaInput = z.input<typeof SetStatusPenggunaInputSchema>;
+export type ListPenggunaInput = z.input<typeof ListPenggunaInputSchema>;
+export type GetLatestIdByRtInput = z.input<typeof GetLatestIdByRtInputSchema>;
+export type RiwayatHargaInput = z.input<typeof RiwayatHargaInputSchema>;
 export type CariNasabahInput = z.input<typeof CariNasabahInputSchema>;
 export type GetNasabahInput = z.input<typeof GetNasabahInputSchema>;
 export type SimpanJenisSampahInput = z.input<typeof SimpanJenisSampahInputSchema>;
@@ -431,6 +456,29 @@ export interface PenggunaRingkas {
   aktif: boolean;
 }
 
+/** Pengguna lengkap untuk halaman kelola pengguna (cari + filter + halaman). */
+export interface PenggunaDetail extends PenggunaRingkas {
+  /** Prefix 2 digit RT dari ID nasabah. null untuk staf / ID tanpa prefix angka. */
+  rt: string | null;
+  mustChangePassword: boolean;
+  createdAt: IsoUtc;
+}
+
+export interface HalamanPengguna {
+  items: PenggunaDetail[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface LatestIdByRtResult {
+  /** ID nasabah berikutnya untuk RT ini, contoh "0103". */
+  nextId: string;
+  rt: string;
+  /** Nomor urut tertinggi yang sudah dipakai di RT ini (0 bila belum ada). */
+  count: number;
+}
+
 export interface NasabahRingkas {
   id: UserId;
   username: string; // "ID Nasabah"
@@ -439,11 +487,35 @@ export interface NasabahRingkas {
   saldo: Rupiah; // dihitung server = SUM(jumlah)
 }
 
+export interface RiwayatHargaTerakhir {
+  waktu: IsoUtc;
+  hargaLama: Rupiah;
+  hargaBaru: Rupiah;
+  diubahOlehNama: string;
+}
+
 export interface JenisSampah {
   id: IdStr;
   nama: string;
   hargaBeli: Rupiah; // per kg
+  /** Harga jual ke lapak per kg. Hanya untuk admin & super_admin (nasabah: tidak ada); null = belum diatur. */
+  hargaJual?: Rupiah | null;
   aktif: boolean;
+  /** Perubahan harga beli terakhir (dari riwayat harga); null bila belum pernah. */
+  terakhirDiubah?: RiwayatHargaTerakhir | null;
+}
+
+export interface RiwayatHargaItem {
+  id: string;
+  sampahId: IdStr;
+  sampahNama: string;
+  /** 0 = jenis sampah baru dibuat. */
+  hargaLama: Rupiah;
+  hargaBaru: Rupiah;
+  diubahOlehId: UserId;
+  diubahOlehNama: string;
+  diubahOlehUsername: string;
+  createdAt: IsoUtc;
 }
 
 export interface ItemTransaksi {
@@ -515,7 +587,7 @@ export interface ResetPasswordResult {
  *
  * Implementasi mock (frontend) dan implementasi asli (backend) WAJIB
  * memenuhi antarmuka yang sama. Kesesuaian dicek compiler lewat
- * src/lib/api/conformance.ts. Kalau salah satu menyimpang, `tsc` gagal.
+ * lib/api/conformance.ts. Kalau salah satu menyimpang, `tsc` gagal.
  */
 export interface Queries {
   /** null = belum login. Satu-satunya fungsi yang tidak memakai ActionResult. */
@@ -526,10 +598,14 @@ export interface Queries {
   cariNasabah(input: CariNasabahInput): Promise<ActionResult<NasabahRingkas[]>>;
   /** admin, super_admin. */
   getNasabah(input: GetNasabahInput): Promise<ActionResult<NasabahRingkas>>;
-  /** admin, super_admin (untuk form setor: hanya aktif). super_admin boleh termasukNonaktif. */
+  /** Semua role (katalog harga). Default hanya aktif; admin & super_admin boleh termasukNonaktif. hargaJual hanya untuk staf. */
   listJenisSampah(input?: { termasukNonaktif?: boolean }): Promise<ActionResult<JenisSampah[]>>;
+  /** super_admin. Riwayat perubahan harga beli, seluruh atau satu jenis sampah, terbaru dulu. */
+  listRiwayatHarga(input?: RiwayatHargaInput): Promise<ActionResult<RiwayatHargaItem[]>>;
   /** super_admin. Daftar admin & super_admin (untuk filter audit & kelola pengguna). */
   listStaf(): Promise<ActionResult<PenggunaRingkas[]>>;
+  /** admin, super_admin. Cari + filter + halaman. Admin hanya melihat nasabah (dipaksa di server). */
+  listPengguna(input?: ListPenggunaInput): Promise<ActionResult<HalamanPengguna>>;
   /** nasabah: hanya miliknya (customerId diabaikan/harus sama). admin & super_admin: siapa saja. */
   getHistori(input: HistoriInput): Promise<ActionResult<Halaman<TransaksiRingkas>>>;
   /** nasabah: hanya miliknya. fotoUrl hanya untuk super_admin. */
@@ -543,14 +619,18 @@ export interface Actions {
   logout(): Promise<ActionResult<null>>;
   gantiPassword(input: GantiPasswordInput): Promise<ActionResult<null>>;
 
-  /** super_admin. */
+  /** super_admin: admin & nasabah. admin: hanya nasabah. */
   buatPengguna(input: BuatPenggunaInput): Promise<ActionResult<PenggunaBaruResult>>;
+  /** admin, super_admin. ID nasabah berikutnya untuk satu RT (saran; buatPengguna tetap menolak duplikat). */
+  getLatestIdByRt(input: GetLatestIdByRtInput): Promise<ActionResult<LatestIdByRtResult>>;
   /** super_admin. Menyetel mustChangePassword = true. */
   resetPasswordPengguna(input: ResetPasswordInput): Promise<ActionResult<ResetPasswordResult>>;
   /** super_admin. Tidak bisa menonaktifkan diri sendiri. */
   setStatusPengguna(input: SetStatusPenggunaInput): Promise<ActionResult<PenggunaRingkas>>;
-  /** super_admin. Buat (tanpa id) atau ubah (dengan id). Perubahan harga hanya berlaku untuk transaksi berikutnya. */
+  /** admin, super_admin. Buat (tanpa id) atau ubah (dengan id). Perubahan harga hanya berlaku untuk transaksi berikutnya; perubahan harga beli dicatat di riwayat harga. */
   simpanJenisSampah(input: SimpanJenisSampahInput): Promise<ActionResult<JenisSampah>>;
+  /** Sama dengan simpanJenisSampah (nama yang dipakai halaman katalog). */
+  updateHargaSampah(input: SimpanJenisSampahInput): Promise<ActionResult<JenisSampah>>;
 
   /** admin, super_admin. Argumen = FormData, lihat buildSetorFormData. */
   setor(formData: FormData): Promise<ActionResult<MutasiResult>>;
@@ -569,18 +649,22 @@ export const AKSES: Record<keyof Queries | keyof Actions, readonly Role[]> = {
   getProfilSaya: ["nasabah"],
   cariNasabah: ["admin", "super_admin"],
   getNasabah: ["admin", "super_admin"],
-  listJenisSampah: ["admin", "super_admin"],
+  listJenisSampah: ROLES,
+  listRiwayatHarga: ["super_admin"],
   listStaf: ["super_admin"],
+  listPengguna: ["admin", "super_admin"],
   getHistori: ROLES,
   getTransaksi: ROLES,
   auditTransaksi: ["super_admin"],
   login: ROLES,
   logout: ROLES,
   gantiPassword: ROLES,
-  buatPengguna: ["super_admin"],
+  buatPengguna: ["admin", "super_admin"],
+  getLatestIdByRt: ["admin", "super_admin"],
   resetPasswordPengguna: ["super_admin"],
   setStatusPengguna: ["super_admin"],
-  simpanJenisSampah: ["super_admin"],
+  simpanJenisSampah: ["admin", "super_admin"],
+  updateHargaSampah: ["admin", "super_admin"],
   setor: ["admin", "super_admin"],
   tarik: ["admin", "super_admin"],
   koreksi: ["super_admin"],

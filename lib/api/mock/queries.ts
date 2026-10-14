@@ -7,7 +7,7 @@
  */
 
 import "server-only";
-import type { Queries, TransaksiRingkas } from "@/contract";
+import type { JenisSampah, PenggunaDetail, Queries, TransaksiRingkas } from "@/contract";
 import { ok, fail } from "@/contract";
 import { store } from "./_store";
 
@@ -60,12 +60,58 @@ export const mockQueries: Queries = {
 
   async listJenisSampah(input) {
     await delay();
-    if (!store.sesi) return fail("TIDAK_LOGIN");
-    const termasukNonaktif = input?.termasukNonaktif ?? false;
-    const hasil = termasukNonaktif
-      ? store.jenisSampah
-      : store.jenisSampah.filter((j) => j.aktif);
+    const sesi = store.sesi;
+    if (!sesi) return fail("TIDAK_LOGIN");
+    const staf = sesi.role !== "nasabah";
+    const termasukNonaktif = staf && (input?.termasukNonaktif ?? false);
+    const hasil = (termasukNonaktif ? store.jenisSampah : store.jenisSampah.filter((j) => j.aktif))
+      .map((j): JenisSampah => {
+        if (staf) return j;
+        const { hargaJual: _hargaJual, ...tanpaHargaJual } = j;
+        void _hargaJual;
+        return tanpaHargaJual;
+      })
+      .sort((a, b) => a.nama.localeCompare(b.nama));
     return ok(hasil);
+  },
+
+  async listRiwayatHarga(input) {
+    await delay();
+    const sesi = store.sesi;
+    if (!sesi) return fail("TIDAK_LOGIN");
+    if (sesi.role !== "super_admin") return fail("TIDAK_DIIZINKAN");
+    const hasil = store.riwayatHarga
+      .filter((r) => !input?.sampahId || r.sampahId === input.sampahId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return ok(hasil);
+  },
+
+  async listPengguna(input) {
+    await delay();
+    const sesi = store.sesi;
+    if (!sesi) return fail("TIDAK_LOGIN");
+    if (sesi.role === "nasabah") return fail("TIDAK_DIIZINKAN");
+    const role = sesi.role === "admin" ? "nasabah" : input?.role;
+    const q = input?.search?.trim().toLowerCase();
+    const rt = input?.rt?.trim().padStart(2, "0");
+    const limit = input?.limit ?? 20;
+    const offset = input?.offset ?? 0;
+    const semua: PenggunaDetail[] = [
+      ...store.staf,
+      ...store.nasabah.map((n) => ({ id: n.id, username: n.username, nama: n.nama, role: "nasabah" as const, aktif: n.aktif })),
+    ]
+      .filter((u) => !role || u.role === role)
+      .filter((u) => input?.aktif === undefined || u.aktif === input.aktif)
+      .filter((u) => !rt || u.username.startsWith(rt))
+      .filter((u) => !q || u.username.toLowerCase().includes(q) || u.nama.toLowerCase().includes(q))
+      .sort((a, b) => a.role.localeCompare(b.role) || a.username.localeCompare(b.username))
+      .map((u) => ({
+        ...u,
+        rt: u.role === "nasabah" && /^\d{2}/.test(u.username) ? u.username.slice(0, 2) : null,
+        mustChangePassword: store.mustChangePassword.get(u.id) ?? false,
+        createdAt: store.dibuatPada.get(u.id) ?? "2024-08-01T00:00:00.000Z",
+      }));
+    return ok({ items: semua.slice(offset, offset + limit), total: semua.length, limit, offset });
   },
 
   async listStaf() {

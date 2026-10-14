@@ -115,7 +115,7 @@ describe("buatPengguna (super_admin)", () => {
     expect(masukBaru.ok && masukBaru.data).toMatchObject({ role: "nasabah", mustChangePassword: true });
   });
 
-  it("USERNAME_SUDAH_ADA (termasuk beda huruf besar); validasi; hanya super_admin", async () => {
+  it("USERNAME_SUDAH_ADA (termasuk beda huruf besar); validasi; admin hanya boleh membuat nasabah", async () => {
     const sa = await masuk(await buatAkun("super_admin"));
     const ada = await buatAkun("admin");
     expect(await sbg(sa, () => buatPengguna({ role: "admin", username: ada.username.toUpperCase(), nama: "Dobel" }))).toEqual(
@@ -125,9 +125,12 @@ describe("buatPengguna (super_admin)", () => {
     expect(!salah.ok && Object.keys(salah.fieldErrors ?? {}).sort()).toEqual(["nama", "username"]);
 
     const admin = await masuk(ada);
-    expect(await sbg(admin, () => buatPengguna({ role: "nasabah", username: usernameAcak(), nama: "Coba" }))).toEqual(
+    expect(await sbg(admin, () => buatPengguna({ role: "admin", username: usernameAcak(), nama: "Coba" }))).toEqual(
       fail("TIDAK_DIIZINKAN"),
     );
+    const viaAdmin = await sbg(admin, () => buatPengguna({ role: "nasabah", username: usernameAcak(), nama: "Coba" }));
+    expect(viaAdmin.ok && viaAdmin.data.pengguna).toMatchObject({ role: "nasabah", nama: "Coba", aktif: true });
+    expect(viaAdmin.ok && viaAdmin.data.passwordSementara).toMatch(/^[A-HJ-NP-Za-km-z2-9]{10}$/);
   });
 
   it("dua permintaan PARALEL dengan username sama: satu sukses, satu USERNAME_SUDAH_ADA", async () => {

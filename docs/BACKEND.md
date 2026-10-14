@@ -7,9 +7,9 @@ sudah ada di `server/api/` dan diperiksa compiler lewat `server/api/conformance.
 
 | File | Isi |
 |---|---|
-| `server/api/actions.ts` | Server Actions (`"use server"`): login, logout, gantiPassword, buatPengguna, resetPasswordPengguna, setStatusPengguna, simpanJenisSampah, setor, tarik, koreksi |
+| `server/api/actions.ts` | Server Actions (`"use server"`): login, logout, gantiPassword, buatPengguna, getLatestIdByRt, resetPasswordPengguna, setStatusPengguna, simpanJenisSampah, updateHargaSampah, setor, tarik, koreksi |
 | `server/api/real-actions.ts` | Objek `realActions: Actions` untuk saklar frontend (tanpa `server-only`, boleh diimpor Client Component) |
-| `server/api/queries.ts` | Query (`server-only`): getSesi, getProfilSaya, cariNasabah, getNasabah, listJenisSampah, listStaf, getHistori, getTransaksi, auditTransaksi + objek `realQueries: Queries` |
+| `server/api/queries.ts` | Query (`server-only`): getSesi, getProfilSaya, cariNasabah, getNasabah, listJenisSampah, listRiwayatHarga, listStaf, listPengguna, getHistori, getTransaksi, auditTransaksi + objek `realQueries: Queries` |
 | `server/api/conformance.ts` | Pemeriksaan tipe `Queries`/`Actions` (tsc saja) |
 | `server/guards.ts` | `requireAkses(nama)`: urutan kontrak Bagian 8.1 |
 | `server/auth.ts` | Konfigurasi Better Auth 1.7.6 |
@@ -84,6 +84,10 @@ Secret GitHub Actions (hanya workflow backup): `SUPABASE_DB_URL` (owner, 5432) d
    5. `20260930161241_login_limiter` — tabel pembatas login
    6. `20260930161244_login_limiter_akses` — GRANT + RLS tabel pembatas login
    7. `20261001125555_login_limiter_bersih` — index waktu untuk pembersihan
+   8. `20261009014811_abnormal_mauler` — (branch Kaywam) CHECK setor: foto boleh kosong di DB; action `setor` tetap mewajibkan foto
+   9. `20261009033635_peaceful_shen` — (branch Kaywam) tabel `price_history`
+   10. `20261009070504_cooing_argent` — (branch Kaywam) kolom `waste_types.harga_jual`
+   11. `20261014013750_price_history_akses` — GRANT SELECT/INSERT + RLS `price_history` untuk app_server
    Migration pertama ke Supabase membekukan riwayat: setelah itu perubahan hanya lewat migration BARU.
 2. Set password `app_server` (tidak ada di migration): konek sebagai `postgres` dengan psql lalu
    `\password app_server`, isi `DATABASE_URL` dengan username `app_server.<project-ref>`.
@@ -156,7 +160,13 @@ dan tes.
 - Ganti password: password umum / berisi ID pengguna ditolak (`VALIDASI_GAGAL`,
   `fieldErrors.passwordBaru`); sesi lain dicabut, sesi saat ini tetap.
 - Reset password & nonaktifkan pengguna menghapus SEMUA sesi pengguna itu.
-- `listJenisSampah`: admin selalu hanya yang aktif; `termasukNonaktif` hanya untuk super_admin.
+- `listJenisSampah`: semua role (katalog). Default hanya aktif; `termasukNonaktif` hanya untuk
+  staf. `hargaJual` hanya dikirim ke admin/super_admin (nasabah: field tidak ada).
+- Admin boleh membuat **nasabah** (bukan admin) dan mengubah jenis sampah/harga. Setiap perubahan
+  harga beli (dan pembuatan jenis baru, harga lama 0) dicatat di `price_history` (append-only);
+  `listRiwayatHarga` hanya super_admin. `hargaJual` tidak dikirim = tidak diubah.
+- `listPengguna`: admin selalu dipaksa ke role nasabah. RT = 2 digit pertama ID nasabah;
+  `getLatestIdByRt` hanya saran ID berikutnya, `buatPengguna` tetap menolak duplikat.
 - `auditTransaksi`: `dari`/`sampai` = tanggal kalender Asia/Jakarta, inklusif.
 - Handler HTTP Better Auth (`/api/auth/*`) TIDAK di-mount; semua auth lewat Server Action.
 

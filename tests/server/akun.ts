@@ -14,12 +14,15 @@ export interface Akun {
 
 export const usernameAcak = (awalan = "u") => `${awalan}${randomBytes(6).toString("hex")}`;
 
-export async function buatAkun(role: Role, opsi: { mustChangePassword?: boolean } = {}): Promise<Akun> {
-  const username = usernameAcak(role[0]);
+export async function buatAkun(
+  role: Role,
+  opsi: { mustChangePassword?: boolean; username?: string; nama?: string } = {},
+): Promise<Akun> {
+  const username = opsi.username ?? usernameAcak(role[0]);
   const password = `Pw-${randomBytes(8).toString("hex")}`;
   const userId = await buatPenggunaDenganPassword({
     username,
-    nama: `Tes ${role}`,
+    nama: opsi.nama ?? `Tes ${role}`,
     role,
     password,
     mustChangePassword: opsi.mustChangePassword ?? false,

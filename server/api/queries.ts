@@ -15,13 +15,20 @@ import {
   type GetTransaksiInput,
   GetTransaksiInputSchema,
   type Halaman,
+  type HalamanPengguna,
   type HistoriInput,
   HistoriInputSchema,
   type JenisSampah,
+  type ListPenggunaInput,
+  ListPenggunaInputSchema,
   type NasabahRingkas,
   ok,
+  type PenggunaDetail,
   type PenggunaRingkas,
   type Queries,
+  type RiwayatHargaInput,
+  RiwayatHargaInputSchema,
+  type RiwayatHargaItem,
   type SesiInfo,
   type TransaksiDetail,
   type TransaksiRingkas,
@@ -29,7 +36,7 @@ import {
 import { idKeNumber, keNumberAman } from "../angka";
 import { db } from "../db";
 import { user } from "../db/auth-schema";
-import { transactions, wasteTypes } from "../db/schema";
+import { priceHistory, transactions, wasteTypes } from "../db/schema";
 import { logServer } from "../errors";
 import { requireAkses } from "../guards";
 import { muatTransaksiDetail, namaPembuatSql, sudahDibalikSql } from "../transaksi";
@@ -117,14 +124,78 @@ export async function listJenisSampah(input?: { termasukNonaktif?: boolean }): P
   return jalankan("listJenisSampah", async (sesi) => {
     const parsed = ListJenisSampahInputSchema.safeParse(input);
     if (!parsed.success) return failDariZod(parsed.error);
-    // Admin hanya melihat yang aktif (form setor); hanya super_admin boleh termasukNonaktif.
-    const semua = sesi.role === "super_admin" && parsed.data?.termasukNonaktif === true;
+    // Katalog untuk semua role. Nasabah: hanya yang aktif dan tanpa harga jual.
+    const staf = sesi.role !== "nasabah";
+    const semua = staf && parsed.data?.termasukNonaktif === true;
     const rows = await db
       .select()
       .from(wasteTypes)
       .where(semua ? undefined : eq(wasteTypes.aktif, true))
       .orderBy(asc(wasteTypes.nama));
-    return ok(rows.map((r) => ({ id: String(r.id), nama: r.nama, hargaBeli: r.hargaBeli, aktif: r.aktif })));
+
+    // Perubahan harga terakhir per jenis (DISTINCT ON = baris terbaru per sampah_id).
+    const terakhir = await db
+      .selectDistinctOn([priceHistory.sampahId], {
+        sampahId: priceHistory.sampahId,
+        hargaLama: priceHistory.hargaLama,
+        hargaBaru: priceHistory.hargaBaru,
+        waktu: priceHistory.createdAt,
+        diubahOlehNama: user.name,
+      })
+      .from(priceHistory)
+      .innerJoin(user, eq(user.id, priceHistory.diubahOleh))
+      .orderBy(priceHistory.sampahId, desc(priceHistory.createdAt), desc(priceHistory.id));
+    const petaTerakhir = new Map(terakhir.map((r) => [r.sampahId, r]));
+
+    return ok(
+      rows.map((r): JenisSampah => {
+        const t = petaTerakhir.get(r.id);
+        return {
+          id: String(r.id),
+          nama: r.nama,
+          hargaBeli: r.hargaBeli,
+          ...(staf ? { hargaJual: r.hargaJual } : {}),
+          aktif: r.aktif,
+          terakhirDiubah: t
+            ? { waktu: t.waktu.toISOString(), hargaLama: t.hargaLama, hargaBaru: t.hargaBaru, diubahOlehNama: t.diubahOlehNama }
+            : null,
+        };
+      }),
+    );
+  });
+}
+
+export async function listRiwayatHarga(input?: RiwayatHargaInput): Promise<ActionResult<RiwayatHargaItem[]>> {
+  return jalankan("listRiwayatHarga", async () => {
+    const parsed = RiwayatHargaInputSchema.safeParse(input ?? {});
+    if (!parsed.success) return failDariZod(parsed.error);
+    const sampahId = parsed.data.sampahId === undefined ? undefined : idKeNumber(parsed.data.sampahId);
+    if (sampahId === null) return ok([]);
+    const rows = await db
+      .select({
+        id: priceHistory.id,
+        sampahId: priceHistory.sampahId,
+        sampahNama: wasteTypes.nama,
+        hargaLama: priceHistory.hargaLama,
+        hargaBaru: priceHistory.hargaBaru,
+        diubahOlehId: priceHistory.diubahOleh,
+        diubahOlehNama: user.name,
+        diubahOlehUsername: user.username,
+        createdAt: priceHistory.createdAt,
+      })
+      .from(priceHistory)
+      .innerJoin(wasteTypes, eq(wasteTypes.id, priceHistory.sampahId))
+      .innerJoin(user, eq(user.id, priceHistory.diubahOleh))
+      .where(sampahId === undefined ? undefined : eq(priceHistory.sampahId, sampahId))
+      .orderBy(desc(priceHistory.createdAt), desc(priceHistory.id));
+    return ok(
+      rows.map((r) => ({
+        ...r,
+        sampahId: String(r.sampahId),
+        diubahOlehUsername: r.diubahOlehUsername ?? "",
+        createdAt: r.createdAt.toISOString(),
+      })),
+    );
   });
 }
 
@@ -136,6 +207,63 @@ export async function listStaf(): Promise<ActionResult<PenggunaRingkas[]>> {
       .where(inArray(user.role, ["admin", "super_admin"]))
       .orderBy(asc(user.role), asc(user.username));
     return ok(rows.map((r) => ({ ...r, username: r.username ?? "" })));
+  });
+}
+
+/** Escape karakter khusus LIKE lalu bungkus jadi pola "mengandung". */
+function polaMengandung(q: string): string {
+  return `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+}
+
+export async function listPengguna(input?: ListPenggunaInput): Promise<ActionResult<HalamanPengguna>> {
+  return jalankan("listPengguna", async (sesi) => {
+    const parsed = ListPenggunaInputSchema.safeParse(input ?? {});
+    if (!parsed.success) return failDariZod(parsed.error);
+    const { search, rt, aktif, limit, offset } = parsed.data;
+    // Admin hanya boleh melihat nasabah, apa pun filter role yang dikirim.
+    const role = sesi.role === "admin" ? "nasabah" : parsed.data.role;
+
+    const syarat: SQL[] = [];
+    if (role) syarat.push(eq(user.role, role));
+    if (aktif !== undefined) syarat.push(eq(user.aktif, aktif));
+    if (rt) syarat.push(ilike(user.username, polaPrefix(rt.padStart(2, "0"))));
+    if (search) {
+      const pola = polaMengandung(search);
+      syarat.push(or(ilike(user.username, pola), ilike(user.name, pola))!);
+    }
+    const where = syarat.length > 0 ? and(...syarat) : undefined;
+
+    const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(user).where(where);
+    const rows = await db
+      .select({
+        id: user.id,
+        username: user.username,
+        nama: user.name,
+        role: user.role,
+        aktif: user.aktif,
+        mustChangePassword: user.mustChangePassword,
+        createdAt: user.createdAt,
+      })
+      .from(user)
+      .where(where)
+      .orderBy(asc(user.role), asc(user.username))
+      .limit(limit)
+      .offset(offset);
+
+    const items = rows.map((u): PenggunaDetail => {
+      const username = u.username ?? "";
+      return {
+        id: u.id,
+        username,
+        nama: u.nama,
+        role: u.role,
+        aktif: u.aktif,
+        rt: u.role === "nasabah" && /^\d{2}/.test(username) ? username.slice(0, 2) : null,
+        mustChangePassword: u.mustChangePassword,
+        createdAt: u.createdAt.toISOString(),
+      };
+    });
+    return ok({ items, total, limit, offset });
   });
 }
 
@@ -244,14 +372,16 @@ export async function auditTransaksi(input: AuditInput): Promise<ActionResult<Ha
   });
 }
 
-/** Objek untuk saklar frontend (src/lib/api/queries.ts). Dicek `Queries` oleh tsc. */
+/** Objek untuk saklar frontend (lib/api/queries.ts). Dicek `Queries` oleh tsc. */
 export const realQueries: Queries = {
   getSesi,
   getProfilSaya,
   cariNasabah,
   getNasabah,
   listJenisSampah,
+  listRiwayatHarga,
   listStaf,
+  listPengguna,
   getHistori,
   getTransaksi,
   auditTransaksi,

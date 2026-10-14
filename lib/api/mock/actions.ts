@@ -11,6 +11,7 @@ import type { Actions } from "@/contract";
 import {
   buatPengguna,
   gantiPassword,
+  getLatestIdByRt,
   koreksi,
   login,
   logout,
@@ -19,6 +20,7 @@ import {
   setStatusPengguna,
   simpanJenisSampah,
   tarik,
+  updateHargaSampah,
 } from "./server-actions";
 
 export const mockActions: Actions = {
@@ -26,9 +28,11 @@ export const mockActions: Actions = {
   logout,
   gantiPassword,
   buatPengguna,
+  getLatestIdByRt,
   resetPasswordPengguna,
   setStatusPengguna,
   simpanJenisSampah,
+  updateHargaSampah,
   setor,
   tarik,
   koreksi,

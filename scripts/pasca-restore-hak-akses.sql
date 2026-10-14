@@ -5,7 +5,7 @@
 -- setor/tarik/koreksi (SECURITY DEFINER, melewati RLS) dan app_server tidak bisa membaca apa pun.
 --
 -- Isinya = semua pernyataan hak akses dari migration (roles_privileges_rls, ledger_integrity,
--- ledger_functions, login_limiter_akses). Bila migration baru menambah GRANT/REVOKE, tambahkan
+-- ledger_functions, login_limiter_akses, price_history_akses). Bila migration baru menambah GRANT/REVOKE, tambahkan
 -- juga di sini. Role anon & authenticated harus sudah ada (bawaan Supabase / init script Docker).
 
 \set ON_ERROR_STOP on
@@ -58,5 +58,9 @@ GRANT EXECUTE ON FUNCTION public.koreksi(bigint, text, uuid, text) TO app_server
 -- login_limiter_akses
 REVOKE ALL ON public.login_gagal_username, public.login_gagal_ip FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, DELETE ON public.login_gagal_username, public.login_gagal_ip TO app_server;
+
+-- price_history_akses
+REVOKE ALL ON public.price_history FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT ON public.price_history TO app_server;
 
 COMMIT;

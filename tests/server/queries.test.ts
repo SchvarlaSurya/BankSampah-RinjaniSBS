@@ -1,8 +1,16 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { fail } from "@/contract";
-import { simpanJenisSampah } from "@/server/api/actions";
-import { cariNasabah, getNasabah, getProfilSaya, getSesi, listJenisSampah, listStaf } from "@/server/api/queries";
+import { simpanJenisSampah, updateHargaSampah } from "@/server/api/actions";
+import {
+  cariNasabah,
+  getNasabah,
+  getProfilSaya,
+  getSesi,
+  listJenisSampah,
+  listRiwayatHarga,
+  listStaf,
+} from "@/server/api/queries";
 import { bukaKoneksi } from "../db/clients";
 import { buatJenis } from "../db/factories";
 import { beratUntukRupiah, itemsJson, setor } from "../db/ledger";
@@ -130,11 +138,17 @@ describe("simpanJenisSampah & listJenisSampah", () => {
     const sa = await masuk(await buatAkun("super_admin"));
     const nama = `Botol ${randomBytes(3).toString("hex")}`;
     const buat = await sbg(sa, () => simpanJenisSampah({ nama: `  ${nama} `, hargaBeli: 2500, aktif: true }));
-    expect(buat).toEqual({ ok: true, data: { id: expect.stringMatching(/^\d+$/), nama, hargaBeli: 2500, aktif: true } });
+    expect(buat).toEqual({
+      ok: true,
+      data: { id: expect.stringMatching(/^\d+$/), nama, hargaBeli: 2500, hargaJual: null, aktif: true },
+    });
     if (!buat.ok) return;
 
-    const ubah = await sbg(sa, () => simpanJenisSampah({ id: buat.data.id, nama, hargaBeli: 3000, aktif: false }));
-    expect(ubah).toEqual({ ok: true, data: { id: buat.data.id, nama, hargaBeli: 3000, aktif: false } });
+    const ubah = await sbg(sa, () => simpanJenisSampah({ id: buat.data.id, nama, hargaBeli: 3000, hargaJual: 3600, aktif: false }));
+    expect(ubah).toEqual({ ok: true, data: { id: buat.data.id, nama, hargaBeli: 3000, hargaJual: 3600, aktif: false } });
+    // hargaJual tidak dikirim = tidak diubah.
+    const tetap = await sbg(sa, () => simpanJenisSampah({ id: buat.data.id, nama, hargaBeli: 3000, aktif: false }));
+    expect(tetap.ok && tetap.data.hargaJual).toBe(3600);
 
     const dobel = await sbg(sa, () => simpanJenisSampah({ nama: ` ${nama.toUpperCase()}  `, hargaBeli: 1, aktif: true }));
     expect(dobel).toEqual(fail("VALIDASI_GAGAL", { fieldErrors: { nama: ["Nama jenis sampah sudah dipakai"] } }));
@@ -145,11 +159,12 @@ describe("simpanJenisSampah & listJenisSampah", () => {
     const invalid = await sbg(sa, () => simpanJenisSampah({ nama: "B", hargaBeli: 0, aktif: true }));
     expect(!invalid.ok && Object.keys(invalid.fieldErrors ?? {}).sort()).toEqual(["hargaBeli", "nama"]);
 
-    const admin = await masuk(await buatAkun("admin"));
-    expect(await sbg(admin, () => simpanJenisSampah({ nama: "Apa", hargaBeli: 1, aktif: true }))).toEqual(fail("TIDAK_DIIZINKAN"));
+    const nasabah = await masuk(await buatAkun("nasabah"));
+    expect(await sbg(nasabah, () => simpanJenisSampah({ nama: "Apa", hargaBeli: 1, aktif: true }))).toEqual(fail("TIDAK_DIIZINKAN"));
+    expect(await sbg(nasabah, () => updateHargaSampah({ nama: "Apa", hargaBeli: 1, aktif: true }))).toEqual(fail("TIDAK_DIIZINKAN"));
   });
 
-  it("admin hanya melihat yang aktif (walau minta termasukNonaktif); super_admin boleh semua", async () => {
+  it("default hanya aktif; staf boleh termasukNonaktif; nasabah hanya aktif & tanpa hargaJual", async () => {
     const aktif = await buatJenis(owner, 1111);
     const nonaktif = await buatJenis(owner, 2222, { aktif: false });
     const admin = await masuk(await buatAkun("admin"));
@@ -159,15 +174,72 @@ describe("simpanJenisSampah & listJenisSampah", () => {
       if (!h.ok) throw new Error(h.code);
       return h.data.map((j) => j.id);
     };
-    expect(await ids(admin, { termasukNonaktif: true })).toContain(aktif);
-    expect(await ids(admin, { termasukNonaktif: true })).not.toContain(nonaktif);
+    expect(await ids(admin)).not.toContain(nonaktif);
+    expect(await ids(admin, { termasukNonaktif: true })).toEqual(expect.arrayContaining([aktif, nonaktif]));
     expect(await ids(sa)).not.toContain(nonaktif);
     expect(await ids(sa, { termasukNonaktif: true })).toEqual(expect.arrayContaining([aktif, nonaktif]));
 
     const nasabah = await masuk(await buatAkun("nasabah"));
-    expect(await sbg(nasabah, () => listJenisSampah())).toEqual(fail("TIDAK_DIIZINKAN"));
+    expect(await ids(nasabah, { termasukNonaktif: true })).not.toContain(nonaktif);
+    const katalog = await sbg(nasabah, () => listJenisSampah());
+    if (!katalog.ok) throw new Error(katalog.code);
+    expect(katalog.data.find((j) => j.id === aktif)).toEqual({
+      id: aktif,
+      nama: expect.any(String),
+      hargaBeli: 1111,
+      aktif: true,
+      terakhirDiubah: null,
+    });
+    const viaAdmin = await sbg(admin, () => listJenisSampah());
+    expect(viaAdmin.ok && viaAdmin.data.find((j) => j.id === aktif)).toMatchObject({ hargaJual: null });
     const salah = await sbg(sa, () => listJenisSampah({ termasukNonaktif: "ya" as unknown as boolean }));
     expect(!salah.ok && salah.code).toBe("VALIDASI_GAGAL");
+  });
+});
+
+describe("riwayat harga (price_history)", () => {
+  it("buat & ubah harga beli tercatat (ubah hargaJual saja tidak); terakhirDiubah; filter; hanya super_admin", async () => {
+    const admin = await masuk(await buatAkun("admin", { nama: "Admin Harga" }));
+    const sa = await masuk(await buatAkun("super_admin"));
+    const nama = `Kaleng ${randomBytes(3).toString("hex")}`;
+    const buat = await sbg(admin, () => simpanJenisSampah({ nama, hargaBeli: 1900, aktif: true }));
+    if (!buat.ok) throw new Error(buat.code);
+    const id = buat.data.id;
+    const ubah = await sbg(admin, () => updateHargaSampah({ id, nama, hargaBeli: 2100, aktif: true }));
+    expect(ubah.ok && ubah.data.hargaBeli).toBe(2100);
+    await sbg(sa, () => simpanJenisSampah({ id, nama, hargaBeli: 2100, hargaJual: 2500, aktif: true }));
+
+    const r = await sbg(sa, () => listRiwayatHarga({ sampahId: id }));
+    if (!r.ok) throw new Error(r.code);
+    expect(r.data.map((x) => [x.hargaLama, x.hargaBaru, x.diubahOlehNama])).toEqual([
+      [1900, 2100, "Admin Harga"],
+      [0, 1900, "Admin Harga"],
+    ]);
+    expect(r.data[0]).toMatchObject({ sampahId: id, sampahNama: nama, createdAt: expect.stringMatching(/Z$/) });
+
+    const semua = await sbg(sa, () => listRiwayatHarga());
+    expect(semua.ok && semua.data.filter((x) => x.sampahId === id)).toHaveLength(2);
+    expect(await sbg(sa, () => listRiwayatHarga({ sampahId: "900000000000" }))).toEqual({ ok: true, data: [] });
+    expect(await sbg(admin, () => listRiwayatHarga())).toEqual(fail("TIDAK_DIIZINKAN"));
+    const salah = await sbg(sa, () => listRiwayatHarga({ sampahId: "abc" }));
+    expect(!salah.ok && salah.code).toBe("VALIDASI_GAGAL");
+
+    const k = await sbg(sa, () => listJenisSampah());
+    expect(k.ok && k.data.find((j) => j.id === id)).toMatchObject({
+      hargaJual: 2500,
+      terakhirDiubah: { hargaLama: 1900, hargaBaru: 2100, diubahOlehNama: "Admin Harga", waktu: expect.stringMatching(/Z$/) },
+    });
+  });
+
+  it("app_server: SELECT & INSERT saja (append-only); anon tanpa akses; RLS aktif", async () => {
+    const [r] = await owner`
+      select has_table_privilege('app_server', 'public.price_history', 'SELECT') as sel,
+             has_table_privilege('app_server', 'public.price_history', 'INSERT') as ins,
+             has_table_privilege('app_server', 'public.price_history', 'UPDATE') as upd,
+             has_table_privilege('app_server', 'public.price_history', 'DELETE') as del,
+             has_table_privilege('anon', 'public.price_history', 'SELECT') as anon_sel,
+             (select relrowsecurity from pg_class where oid = 'public.price_history'::regclass) as rls`;
+    expect(r).toEqual({ sel: true, ins: true, upd: false, del: false, anon_sel: false, rls: true });
   });
 });
 

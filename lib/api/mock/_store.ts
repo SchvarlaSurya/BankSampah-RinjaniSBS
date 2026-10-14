@@ -17,6 +17,7 @@ import type {
   NasabahRingkas,
   PenggunaRingkas,
   JenisSampah,
+  RiwayatHargaItem,
   TransaksiDetail,
   SesiInfo,
 } from "@/contract";
@@ -32,6 +33,9 @@ interface MockState {
   usersByUsername: Map<string, NasabahRingkas | PenggunaRingkas>;
   usersById: Map<UserId, NasabahRingkas | PenggunaRingkas>;
   jenisSampah: JenisSampah[];
+  riwayatHarga: RiwayatHargaItem[];
+  /** Waktu akun dibuat (PenggunaDetail.createdAt). */
+  dibuatPada: Map<UserId, string>;
   transaksi: TransaksiDetail[];
   /** clientRequestId -> transaksiId (idempotensi) */
   clientRequestIndex: Map<string, IdStr>;
@@ -58,14 +62,14 @@ function buatState(): MockState {
   const nasabah: NasabahRingkas[] = [
     {
       id: "user-nasabah-1" as UserId,
-      username: "nasabah01",
+      username: "0101",
       nama: "Budi Santoso",
       saldo: 50000 as Rupiah,
       aktif: true,
     },
     {
       id: "user-nasabah-2" as UserId,
-      username: "nasabah02",
+      username: "0102",
       nama: "Siti Aminah",
       saldo: 120000 as Rupiah,
       aktif: true,
@@ -80,7 +84,9 @@ function buatState(): MockState {
       id: String(i + 1) as IdStr,
       nama: x.nama,
       hargaBeli: x.hargaSbs as Rupiah,
+      hargaJual: null,
       aktif: x.keterangan !== "Stop Sementara",
+      terakhirDiubah: null,
     }));
   const js = (nama: string) => {
     const j = jenisSampah.find((x) => x.nama === nama);
@@ -99,7 +105,7 @@ function buatState(): MockState {
       dibuatOlehNama: "Admin Satu",
       customerId: "user-nasabah-1" as UserId,
       customerNama: "Budi Santoso",
-      customerUsername: "nasabah01",
+      customerUsername: "0101",
       items: [
         { ...js("Kardus"), berat: "10.00", subtotal: 16000 as Rupiah },
       ],
@@ -119,7 +125,7 @@ function buatState(): MockState {
       dibuatOlehNama: "Admin Satu",
       customerId: "user-nasabah-1" as UserId,
       customerNama: "Budi Santoso",
-      customerUsername: "nasabah01",
+      customerUsername: "0101",
       items: [],
       fotoUrl: null,
       fotoUrlBerlakuHingga: null,
@@ -137,7 +143,7 @@ function buatState(): MockState {
       dibuatOlehNama: "Admin Satu",
       customerId: "user-nasabah-2" as UserId,
       customerNama: "Siti Aminah",
-      customerUsername: "nasabah02",
+      customerUsername: "0102",
       items: [
         { ...js("Botol air mineral/bodong/pet bersih"), berat: "12.00", subtotal: 52800 as Rupiah },
         { ...js("Kaleng"), berat: "1.50", subtotal: 2850 as Rupiah },
@@ -162,6 +168,8 @@ function buatState(): MockState {
     usersByUsername: new Map(semuaUser.map((u) => [u.username, u])),
     usersById: new Map(semuaUser.map((u) => [u.id, u])),
     jenisSampah,
+    riwayatHarga: [],
+    dibuatPada: new Map(semuaUser.map((u) => [u.id, "2024-08-01T00:00:00.000Z"])),
     transaksi,
     clientRequestIndex: new Map(),
   };
