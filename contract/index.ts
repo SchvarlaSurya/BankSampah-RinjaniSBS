@@ -289,6 +289,58 @@ export const GantiPasswordInputSchema = z
     message: "Password baru tidak boleh sama dengan password saat ini",
   });
 
+// --- Nama orang (pengguna) ---
+/**
+ * Kata kasar / pornografi yang tidak boleh ada di nama pengguna. Dicocokkan PER KATA (bukan
+ * potongan kata) setelah normalisasi, supaya nama asli seperti "Dickson", "Hasudungan",
+ * "Bobby", atau "Essex" tidak ikut ditolak.
+ */
+export const KATA_TERLARANG = [
+  "anjing", "babi", "kontol", "memek", "jancok", "bangsat", "asu", "pantek", "ngentot", "puki",
+  "tolol", "goblok", "sex", "porn", "bokep", "sange", "bo", "pussy", "dick", "fuck", "shit", "bitch",
+] as const;
+
+export const PESAN_NAMA_TERLARANG =
+  "Nama mengandung kata-kata yang tidak sopan atau terlarang. Mohon gunakan nama yang pantas.";
+
+/** Leet-speak sederhana -> huruf. */
+const LEET: Record<string, string> = { "@": "a", "4": "a", "0": "o", $: "s", "5": "s", "!": "i", "1": "i", "3": "e", "7": "t" };
+/** "anjiiing" -> "anjing": huruf berulang diringkas (diterapkan ke input DAN daftar). */
+const ringkasUlang = (k: string) => k.replace(/(.)\1+/g, "$1");
+const TERLARANG = new Set(KATA_TERLARANG.map(ringkasUlang));
+
+/**
+ * true bila nama memuat kata terlarang (tidak peka huruf besar/kecil). Menangani leet-speak
+ * (@ 4 0 $ 5 ! 1 3 7), huruf berulang, dan huruf yang dipisah spasi/titik ("a n j i n g").
+ */
+export function mengandungKataTerlarang(nama: string): boolean {
+  const normal = nama.toLowerCase().replace(/[@40$5!137]/g, (c) => LEET[c]);
+  const potongan = normal.split(/[^\p{L}]+/u).filter(Boolean);
+  // Huruf tunggal berurutan digabung: "a n j i n g" -> "anjing".
+  const kata: string[] = [];
+  let tunggal = "";
+  for (const p of potongan) {
+    if (p.length === 1) {
+      tunggal += p;
+      continue;
+    }
+    if (tunggal) kata.push(tunggal);
+    tunggal = "";
+    kata.push(p);
+  }
+  if (tunggal) kata.push(tunggal);
+  return kata.some((k) => TERLARANG.has(ringkasUlang(k)));
+}
+
+/** Nama orang: 3-40 karakter; huruf, angka, spasi, titik, petik tunggal; tanpa kata terlarang. */
+export const namaOrang = z
+  .string()
+  .trim()
+  .min(3, "Minimal 3 karakter")
+  .max(40, "Maksimal 40 karakter")
+  .refine((v) => !mengandungKataTerlarang(v), PESAN_NAMA_TERLARANG)
+  .regex(/^[\p{L}\p{N} .']+$/u, "Hanya boleh huruf, angka, spasi, titik (.), dan petik tunggal (')");
+
 // --- Pengguna (Super Admin) ---
 export const BuatPenggunaInputSchema = z.object({
   role: z.enum(["admin", "nasabah"]),
@@ -297,7 +349,7 @@ export const BuatPenggunaInputSchema = z.object({
     .trim()
     .toLowerCase()
     .regex(/^[a-z0-9._-]{3,32}$/, "3–32 karakter: huruf kecil, angka, titik, garis bawah, strip"),
-  nama: z.string().trim().min(2, "Terlalu pendek").max(100),
+  nama: namaOrang,
 });
 
 export const ResetPasswordInputSchema = z.object({ userId });

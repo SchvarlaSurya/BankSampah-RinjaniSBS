@@ -200,7 +200,9 @@ export function KelolaPengguna({
     });
 
     if (!res.ok) {
-      setFormErrorMessage(res.message || ERROR_MESSAGES[res.code]);
+      // Pesan spesifik per field (mis. nama berisi kata terlarang) lebih jelas dari pesan umum.
+      const pesanField = res.fieldErrors ? Object.values(res.fieldErrors).flat()[0] : undefined;
+      setFormErrorMessage(pesanField || res.message || ERROR_MESSAGES[res.code]);
     } else {
       setCreateResult({
         username: res.data.pengguna.username,
@@ -448,6 +450,7 @@ export function KelolaPengguna({
               type="text"
               required
               placeholder="contoh: Ibu Sri Rahayu"
+              maxLength={40}
               value={newNama}
               onChange={(e) => setNewNama(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 text-slate-100 text-xs rounded-xl p-3 outline-none focus:border-emerald-500 transition-colors"
