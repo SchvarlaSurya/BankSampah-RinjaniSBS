@@ -32,8 +32,8 @@ export function AppShell({
   return (
     <div className="flex min-h-screen bg-canvas">
       <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col bg-sidebar-bg px-3 py-4 lg:flex">
-        <Link href={akar} className="mb-5 block rounded-control px-2 py-1" aria-label="SBS Rinjani, ke beranda">
-          <LogoSbs varian="gelap" className="mx-auto w-32" priority />
+        <Link href={akar} className="mb-4 block rounded-control px-2 py-1" aria-label="SBS Rinjani, ke beranda">
+          <LogoSbs varian="gelap" className="mx-auto w-24" priority />
         </Link>
 
         <NavSidebar items={menu} akar={akar} />
