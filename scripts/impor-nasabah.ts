@@ -24,7 +24,7 @@ import type { BarisNasabah } from "./ekstrak-nasabah";
 // TANPA override: DATABASE_URL yang di-set eksplisit tetap dipakai.
 config({ path: ".env.local", quiet: true });
 
-/** "IBU ELVIRA" -> "Ibu Elvira". Hanya kapitalisasi dan spasi; isi nama tidak diubah. */
+/** "IBU SITI AMINAH" -> "Ibu Siti Aminah". Hanya kapitalisasi dan spasi; isi nama tidak diubah. */
 const rapikanNama = (n: string) =>
   n
     .replace(/\s+/g, " ")
