@@ -46,7 +46,11 @@ const schema = z.object({
   }
 });
 
-const parsed = schema.safeParse(process.env);
+// DATABASE_URL kosong diperlakukan sama dengan belum di-set.
+const parsed = schema.safeParse({
+  ...process.env,
+  DATABASE_URL: process.env.DATABASE_URL || undefined,
+});
 
 if (!parsed.success) {
   throw new Error(`Env tidak valid:\n${z.prettifyError(parsed.error)}`);
