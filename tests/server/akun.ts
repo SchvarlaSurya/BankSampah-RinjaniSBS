@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { randomBytes } from "node:crypto";
 import type { Role } from "@/contract";
 import { login } from "@/server/api/actions";
@@ -13,12 +14,15 @@ export interface Akun {
 
 export const usernameAcak = (awalan = "u") => `${awalan}${randomBytes(6).toString("hex")}`;
 
-export async function buatAkun(role: Role, opsi: { mustChangePassword?: boolean } = {}): Promise<Akun> {
-  const username = usernameAcak(role[0]);
+export async function buatAkun(
+  role: Role,
+  opsi: { mustChangePassword?: boolean; username?: string; nama?: string } = {},
+): Promise<Akun> {
+  const username = opsi.username ?? usernameAcak(role[0]);
   const password = `Pw-${randomBytes(8).toString("hex")}`;
   const userId = await buatPenggunaDenganPassword({
     username,
-    nama: `Tes ${role}`,
+    nama: opsi.nama ?? `Tes ${role}`,
     role,
     password,
     mustChangePassword: opsi.mustChangePassword ?? false,
@@ -42,3 +46,18 @@ export async function masuk(akun: Akun, browser = new Browser(ipBaru())) {
   if (!hasil.ok) throw new Error(`login ${akun.username} gagal: ${hasil.code}`);
   return browser;
 }
+
+/** Tangkap semua console.* selama tes (untuk memastikan data sensitif tidak pernah di-log). */
+export function tangkapLog() {
+  const pesan: string[] = [];
+  const metode = ["log", "info", "warn", "error", "debug"] as const;
+  const spies = metode.map((m) =>
+    vi.spyOn(console, m).mockImplementation((...args: unknown[]) => {
+      pesan.push(args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" "));
+    }),
+  );
+  return { pesan, pulihkan: () => spies.forEach((s) => s.mockRestore()) };
+}
+
+/** Jalankan fungsi backend sebagai browser tertentu. */
+export const sbg = <T>(b: Browser, fn: () => Promise<T>) => sebagai(b, fn);

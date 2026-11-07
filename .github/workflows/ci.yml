@@ -1,0 +1,59 @@
+# CI untuk setiap PR ke main. Tidak memakai secret apa pun: tes berjalan terhadap Postgres
+# lokal di Docker (docker compose, port 54329) dengan kredensial uji di repo.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  periksa:
+    name: lint, typecheck, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # Tiap langkah tetap jalan walau langkah sebelumnya gagal, supaya semua masalah terlihat.
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck (app + tes)
+        if: ${{ !cancelled() }}
+        run: npm run typecheck
+      # next build memuat modul server (validasi env saat dimuat). Nilai di bawah PALSU dan bukan
+      # rahasia: build tidak pernah konek ke DB/Storage. Env asli hanya di Vercel.
+      - name: Build
+        if: ${{ !cancelled() }}
+        run: npm run build
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+          BETTER_AUTH_SECRET: ci-build-saja-bukan-rahasia-0000000000
+          BETTER_AUTH_URL: http://localhost:3000
+          FOTO_STORAGE: supabase
+          SUPABASE_URL: https://ci-build.invalid
+          SUPABASE_SERVICE_ROLE_KEY: ci-build-saja-bukan-rahasia
+
+  test-db:
+    name: test:db (Postgres lokal di Docker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # docker compose down/up + drizzle-kit migrate dari nol + vitest (scripts/test-db.mjs).
+      - run: npm run test:db

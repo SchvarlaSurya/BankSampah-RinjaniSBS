@@ -3,7 +3,11 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   resolve: {
-    alias: [{ find: /^@\//, replacement: fileURLToPath(new URL("./", import.meta.url)) }],
+    alias: [
+      { find: /^@\//, replacement: fileURLToPath(new URL("./", import.meta.url)) },
+      // "server-only" melempar di luar kondisi react-server; tes menjalankan server/** langsung.
+      { find: /^server-only$/, replacement: fileURLToPath(new URL("./tests/server/server-only-kosong.ts", import.meta.url)) },
+    ],
   },
   test: {
     include: ["tests/**/*.test.ts"],

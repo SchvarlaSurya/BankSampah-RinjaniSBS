@@ -1,6 +1,10 @@
+import "server-only";
 import { randomInt } from "node:crypto";
 import type { Role } from "@/contract";
+import { eq } from "drizzle-orm";
 import { auth } from "./auth";
+import { db } from "./db";
+import { loginGagalUsername } from "./db/schema";
 
 /** Tanpa 0/O/1/l/I supaya tidak tertukar saat dibacakan / diketik ulang. */
 const ALFABET_PASSWORD =
@@ -14,7 +18,7 @@ export function buatPasswordSementara(panjang = 10): string {
 }
 
 /** Better Auth mewajibkan email unik; pengguna bank sampah tidak memakai email. */
-export const emailBuatan = (username: string) =>
+const emailBuatan = (username: string) =>
   `${username}@bank-sampah.invalid`;
 
 /**
@@ -65,4 +69,28 @@ export async function buatPenggunaDenganPassword(data: {
 export async function hapusSemuaSesi(userId: string): Promise<void> {
   const ctx = await auth.$context;
   await ctx.internalAdapter.deleteUserSessions(userId);
+}
+
+/**
+ * Reset oleh super_admin / skrip darurat: password sementara baru (hash bawaan Better Auth lewat
+ * internalAdapter.updatePassword), mustChangePassword=true, SEMUA sesi dihapus, dan kunci
+ * percobaan login per-username dibuka. Password hanya dikembalikan, tidak pernah di-log.
+ */
+export async function resetKePasswordSementara(userId: string, username: string): Promise<string> {
+  const ctx = await auth.$context;
+  const passwordSementara = buatPasswordSementara();
+  await ctx.internalAdapter.updatePassword(userId, await ctx.password.hash(passwordSementara));
+  await ctx.internalAdapter.updateUser(userId, { mustChangePassword: true });
+  await ctx.internalAdapter.deleteUserSessions(userId);
+  await db.delete(loginGagalUsername).where(eq(loginGagalUsername.username, username));
+  return passwordSementara;
+}
+
+/** Cabut semua sesi pengguna KECUALI sesi dengan token ini. */
+export async function hapusSesiLain(userId: string, tokenDipertahankan: string): Promise<void> {
+  const ctx = await auth.$context;
+  const lain = (await ctx.internalAdapter.listSessions(userId))
+    .map((s) => s.token)
+    .filter((t) => t !== tokenDipertahankan);
+  if (lain.length) await ctx.internalAdapter.deleteSessions(lain);
 }

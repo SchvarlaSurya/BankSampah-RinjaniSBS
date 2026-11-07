@@ -1,6 +1,6 @@
 import postgres from "postgres";
 import { afterAll } from "vitest";
-import { urlTesDb } from "./env";
+import { urlTesDb } from "./url-tes";
 
 export type Sql = postgres.Sql;
 export type Tx = postgres.TransactionSql;

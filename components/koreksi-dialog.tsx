@@ -2,9 +2,12 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { actions } from "@/src/lib/api/actions";
-import { ERROR_MESSAGES, LIMIT } from "@/src/contract";
-import { RotateCcw, AlertTriangle, Loader2 } from "lucide-react";
+import { actions } from "@/lib/api/actions";
+import { ERROR_MESSAGES, LIMIT } from "@/contract";
+import { RotateCcw, TriangleAlert, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Field, Textarea } from "@/components/ui/field";
+import { Alert, ModalShell } from "@/components/ui/feedback";
 
 export default function KoreksiDialog({ transaksiId }: { transaksiId: string }) {
   const router = useRouter();
@@ -53,74 +56,60 @@ export default function KoreksiDialog({ transaksiId }: { transaksiId: string }) 
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-300 font-semibold text-xs flex items-center gap-2 transition-all"
-      >
-        <RotateCcw className="w-4 h-4" />
+      <Button variant="danger" onClick={() => setOpen(true)}>
+        <RotateCcw />
         <span>Koreksi / Dibalikkan (Reversal)</span>
-      </button>
+      </Button>
 
       {open && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 w-full max-w-lg space-y-6 shadow-2xl relative">
-            <div className="flex items-center gap-3 text-rose-400">
-              <AlertTriangle className="w-6 h-6" />
-              <h2 className="text-lg font-bold text-white">Konfirmasi Koreksi Transaksi</h2>
+        <ModalShell labelledBy="koreksi-judul" className="max-w-lg">
+          <div className="space-y-5">
+            <div className="flex items-start gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-danger-bg text-danger-fg">
+                <TriangleAlert className="size-5" aria-hidden="true" />
+              </span>
+              <div className="space-y-1">
+                <h2 id="koreksi-judul" className="text-base font-semibold text-ink">
+                  Konfirmasi koreksi transaksi
+                </h2>
+                <p className="text-sm text-ink-muted">
+                  Tindakan ini akan membalikkan efek finansial transaksi. Uang nasabah akan disesuaikan secara otomatis di ledger.
+                </p>
+              </div>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Tindakan ini akan membalikkan efek finansial transaksi. Uang nasabah akan disesuaikan secara otomatis di ledger.
-            </p>
-
-            {errorMessage && (
-              <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
-                <p className="font-semibold">{errorMessage}</p>
-              </div>
-            )}
+            {errorMessage && <Alert tone="danger">{errorMessage}</Alert>}
 
             <form onSubmit={handleKoreksi} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                  Alasan Koreksi (Wajib)
-                </label>
-                <textarea
+              <Field label="Alasan koreksi" htmlFor="koreksi-alasan" required>
+                <Textarea
+                  id="koreksi-alasan"
                   rows={3}
                   required
                   value={alasan}
                   onChange={(e) => setAlasan(e.target.value)}
-                  placeholder="Jelaskan alasan pembatalan / koreksi transaksi..."
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 text-slate-100 placeholder-slate-600 text-xs rounded-xl p-3 outline-none"
+                  placeholder="Jelaskan alasan pembatalan / koreksi transaksi…"
                 />
-              </div>
+              </Field>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  disabled={loading}
-                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
-                >
+              <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+                <Button variant="secondary" onClick={() => setOpen(false)} disabled={loading}>
                   Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-slate-950 text-xs font-bold flex items-center gap-2"
-                >
+                </Button>
+                <Button type="submit" variant="danger" disabled={loading}>
                   {loading ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Memproses...</span>
+                      <Loader2 className="animate-spin" />
+                      <span>Memproses…</span>
                     </>
                   ) : (
-                    <span>Proses Koreksi</span>
+                    <span>Proses koreksi</span>
                   )}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
-        </div>
+        </ModalShell>
       )}
     </>
   );

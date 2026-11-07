@@ -1,3 +1,4 @@
+import "server-only";
 import { and, desc, eq, gt, lt, sql } from "drizzle-orm";
 import { db } from "./db";
 import { loginGagalIp, loginGagalUsername } from "./db/schema";
@@ -68,25 +69,14 @@ export async function percobaanBerhasil(
     await db.delete(loginGagalIp).where(eq(loginGagalIp.id, p.idIp));
 }
 
-/** Gagal: baris percobaan dibiarkan; baris kedaluwarsa untuk kunci yang sama dibersihkan. */
-export async function percobaanGagal(
-  username: string,
-  ip: string | null,
-): Promise<void> {
-  await db
-    .delete(loginGagalUsername)
-    .where(
-      and(
-        eq(loginGagalUsername.username, username),
-        lt(loginGagalUsername.waktu, batasJendela),
-      ),
-    );
-  if (ip)
-    await db
-      .delete(loginGagalIp)
-      .where(
-        and(eq(loginGagalIp.ip, ip), lt(loginGagalIp.waktu, batasJendela)),
-      );
+/**
+ * Gagal: baris percobaan dibiarkan (dihitung). Sekalian buang SEMUA baris yang sudah keluar
+ * dari jendela, untuk semua username/IP, supaya tabel tidak tumbuh tanpa batas. Murah: index
+ * pada kolom waktu, dan hanya dijalankan pada percobaan gagal.
+ */
+export async function percobaanGagal(): Promise<void> {
+  await db.delete(loginGagalUsername).where(lt(loginGagalUsername.waktu, batasJendela));
+  await db.delete(loginGagalIp).where(lt(loginGagalIp.waktu, batasJendela));
 }
 
 async function hapus(idUsername: number, idIp: number | null) {

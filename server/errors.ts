@@ -1,3 +1,4 @@
+import "server-only";
 import { type ErrorCode, kodeDariPesanDb } from "@/contract";
 
 interface PgErrorLike {
@@ -9,7 +10,7 @@ interface PgErrorLike {
 }
 
 /** Error Postgres dari postgres.js langsung atau dari `cause` (Drizzle membungkusnya). */
-function pgErrorDari(e: unknown): PgErrorLike | null {
+export function pgErrorDari(e: unknown): PgErrorLike | null {
   let cur: unknown = e;
   for (let i = 0; i < 4 && cur; i++) {
     const c = cur as { name?: string; severity?: unknown; cause?: unknown };
@@ -56,4 +57,10 @@ export function petaErrorDb(konteks: string, e: unknown): ErrorCode {
   else if (pg?.detail)
     console.info(`[${konteks}] ${kode}`, { detail: pg.detail });
   return kode;
+}
+
+/** Nama constraint bila `e` adalah unique_violation (23505), selain itu null. */
+export function constraintUnik(e: unknown): string | null {
+  const pg = pgErrorDari(e);
+  return pg?.code === "23505" ? (pg.constraint_name ?? "") : null;
 }

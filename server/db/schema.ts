@@ -28,10 +28,13 @@ export const wasteTypes = pgTable(
       .generatedAlwaysAsIdentity(),
     nama: text("nama").notNull(),
     hargaBeli: integer("harga_beli").notNull(),
+    /** Harga jual ke lapak/pengepul. NULL = belum diatur (admin bisa set manual). */
+    hargaJual: integer("harga_jual"),
     aktif: boolean("aktif").notNull().default(true),
   },
   (t) => [
     check("waste_types_harga_beli_positif", sql`${t.hargaBeli} > 0`),
+    check("waste_types_harga_jual_positif", sql`${t.hargaJual} IS NULL OR ${t.hargaJual} > 0`),
     uniqueIndex("waste_types_nama_unique").on(sql`lower(btrim(${t.nama}))`),
   ],
 );
@@ -45,8 +48,8 @@ export const transactions = pgTable(
     customerId: text("customer_id")
       .notNull()
       .references(() => user.id),
-    tipe: text("tipe", { enum: ["setor", "tarik", "koreksi"] }).notNull(),
-    // Bertanda: setor +, tarik -, koreksi = -jumlah transaksi asli.
+    tipe: text("tipe", { enum: ["setor", "tarik", "koreksi", "penyesuaian"] }).notNull(),
+    // Bertanda: setor +, tarik -, koreksi = -jumlah transaksi asli, penyesuaian = + atau -.
     jumlah: integer("jumlah").notNull(),
     dibuatOleh: text("dibuat_oleh")
       .notNull()
@@ -72,7 +75,7 @@ export const transactions = pgTable(
     }),
     check(
       "transactions_tipe_valid",
-      sql`${t.tipe} IN ('setor', 'tarik', 'koreksi')`,
+      sql`${t.tipe} IN ('setor', 'tarik', 'koreksi', 'penyesuaian')`,
     ),
     check("transactions_jumlah_bukan_nol", sql`${t.jumlah} <> 0`),
     check(
@@ -80,8 +83,10 @@ export const transactions = pgTable(
       sql`${t.tipe} <> 'setor' OR (
         ${t.jumlah} > 0
         AND ${t.reversesId} IS NULL
-        AND ${t.pathFoto} IS NOT NULL
-        AND ${t.hashFoto} IS NOT NULL
+        AND (
+          (${t.pathFoto} IS NULL AND ${t.hashFoto} IS NULL)
+          OR (${t.pathFoto} IS NOT NULL AND ${t.hashFoto} IS NOT NULL)
+        )
       )`,
     ),
     check(
@@ -92,6 +97,16 @@ export const transactions = pgTable(
       "transactions_koreksi_valid",
       sql`${t.tipe} <> 'koreksi' OR (
         ${t.reversesId} IS NOT NULL
+        AND ${t.catatan} IS NOT NULL
+        AND btrim(${t.catatan}) <> ''
+      )`,
+    ),
+    check(
+      "transactions_penyesuaian_valid",
+      sql`${t.tipe} <> 'penyesuaian' OR (
+        ${t.reversesId} IS NULL
+        AND ${t.pathFoto} IS NULL
+        AND ${t.hashFoto} IS NULL
         AND ${t.catatan} IS NOT NULL
         AND btrim(${t.catatan}) <> ''
       )`,
@@ -154,6 +169,7 @@ export const loginGagalUsername = pgTable(
       t.username,
       t.waktu.desc().nullsFirst(),
     ),
+    index("login_gagal_username_waktu_idx").on(t.waktu),
   ],
 );
 
@@ -168,5 +184,32 @@ export const loginGagalIp = pgTable(
   },
   (t) => [
     index("login_gagal_ip_ip_waktu_idx").on(t.ip, t.waktu.desc().nullsFirst()),
+    index("login_gagal_ip_waktu_idx").on(t.waktu),
+  ],
+);
+
+export const priceHistory = pgTable(
+  "price_history",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sampahId: bigint("sampah_id", { mode: "number" })
+      .notNull()
+      .references(() => wasteTypes.id, { onDelete: "cascade" }),
+    hargaLama: integer("harga_lama").notNull(),
+    hargaBaru: integer("harga_baru").notNull(),
+    diubahOleh: text("diubah_oleh")
+      .notNull()
+      .references(() => user.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("price_history_sampah_id_idx").on(
+      t.sampahId,
+      t.createdAt.desc().nullsFirst(),
+    ),
+    index("price_history_created_at_idx").on(t.createdAt.desc().nullsFirst()),
+    index("price_history_diubah_oleh_idx").on(t.diubahOleh),
   ],
 );

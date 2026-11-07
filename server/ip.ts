@@ -1,3 +1,4 @@
+import "server-only";
 import { isIP } from "node:net";
 
 /**
@@ -11,7 +12,7 @@ import { isIP } from "node:net";
  * null = IP tidak diketahui (dev lokal / bukan Vercel). Pemanggil melewati limiter per-IP,
  * BUKAN memasukkan semua orang ke satu ember bersama.
  */
-export const HEADER_IP = "x-vercel-forwarded-for";
+const HEADER_IP = "x-vercel-forwarded-for";
 
 export function ipKlien(headers: Headers): string | null {
   const raw = headers.get(HEADER_IP)?.trim();

@@ -1,3 +1,4 @@
+import "server-only";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import {
@@ -22,6 +23,8 @@ export interface SesiServer {
   nama: string;
   role: Role;
   mustChangePassword: boolean;
+  /** Token sesi request ini (untuk mencabut sesi LAIN saat ganti password). */
+  sessionToken: string;
 }
 
 export type HasilGuard =
@@ -55,6 +58,7 @@ export async function sesiDariCookie(): Promise<SesiServer | null> {
     nama: u.nama,
     role: u.role,
     mustChangePassword: u.mustChangePassword,
+    sessionToken: s.session.token,
   };
 }
 
