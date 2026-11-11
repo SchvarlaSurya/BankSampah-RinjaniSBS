@@ -7,6 +7,7 @@ import { LogOut } from "lucide-react";
 import { buttonClass } from "@/components/ui/button";
 import { AppShell } from "@/components/shell/app-shell";
 import type { ItemNav } from "@/components/shell/nav";
+import { PresenceHeartbeat } from "@/components/aktivitas/presence-heartbeat";
 
 import { GantiPasswordModal } from "@/app/nasabah/GantiPasswordModal";
 
@@ -74,6 +75,7 @@ export default async function AdminLayout({
         </>
       }
     >
+      <PresenceHeartbeat />
       {children}
     </AppShell>
   );

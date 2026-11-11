@@ -42,6 +42,7 @@ import {
   type PenyesuaianInput,
   PenyesuaianInputSchema,
 } from "@/contract";
+import { tandaiOffline, termasukStaf } from "../aktivitas-admin";
 import { idKeNumber } from "../angka";
 import { auth } from "../auth";
 import { db } from "../db";
@@ -142,7 +143,8 @@ function kodeApiError(e: unknown): string | undefined {
 
 /** Hapus sesi ini di DB dan cookie-nya (lewat plugin nextCookies). */
 export async function logout(): Promise<ActionResult<null>> {
-  return jalankan("logout", async () => {
+  return jalankan("logout", async (sesi) => {
+    if (termasukStaf(sesi.role)) await tandaiOffline(sesi.userId);
     await auth.api.signOut({ headers: await headers() });
     return ok(null);
   });
