@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+import { urlFotoProfil } from "@/contract";
 import { cn } from "@/lib/utils";
 
 /** Inisial dari nama: dua kata pertama ("Sri Rahayu" -> "SR"), satu kata -> satu huruf. */
@@ -11,19 +15,32 @@ const UKURAN = {
   sm: "size-9 text-sm",
   md: "size-10 text-sm",
   lg: "size-12 text-base",
-  xl: "size-24 text-2xl",
+  xl: "size-28 text-3xl",
 } as const;
 
-/** Lingkaran inisial nama. Teks alternatif dari nama (bukan hanya warna). */
+/**
+ * Foto profil bundar; tanpa foto (atau foto gagal dimuat) = lingkaran inisial nama.
+ * `src` langsung (pratinjau lokal) mengalahkan userId + fotoVersi.
+ */
 export function Avatar({
   nama,
+  userId,
+  fotoVersi,
+  src,
   ukuran = "md",
   className,
 }: {
   nama: string;
+  userId?: string;
+  fotoVersi?: string | null;
+  src?: string | null;
   ukuran?: keyof typeof UKURAN;
   className?: string;
 }) {
+  const url = src ?? (userId ? urlFotoProfil(userId, fotoVersi ?? null) : null);
+  const [gagal, setGagal] = useState<string | null>(null);
+  const tampilFoto = url !== null && gagal !== url;
+
   return (
     <span
       role="img"
@@ -34,7 +51,13 @@ export function Avatar({
         className,
       )}
     >
-      <span aria-hidden="true">{inisialNama(nama)}</span>
+      {tampilFoto ? (
+        // next/image tidak dipakai: route foto memerlukan cookie sesi dan tidak boleh di-cache optimizer.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" className="size-full object-cover" onError={() => setGagal(url)} />
+      ) : (
+        <span aria-hidden="true">{inisialNama(nama)}</span>
+      )}
     </span>
   );
 }

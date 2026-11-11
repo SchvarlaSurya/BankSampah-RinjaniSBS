@@ -30,6 +30,7 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { Alert, EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page";
 import { KelolaAkunPanel } from "./kelola-akun-panel";
+import { Avatar } from "@/components/avatar";
 
 export const RT_OPTIONS = [
   { id: "01", label: "RT 01" },
@@ -589,9 +590,7 @@ export function KelolaPengguna({
                 <li key={user.id} className="px-5 py-3.5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                   <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-muted font-semibold text-ink ring-1 ring-line ring-inset">
-                      {user.nama.charAt(0).toUpperCase()}
-                    </span>
+                    <Avatar nama={user.nama} userId={user.id} fotoVersi={user.fotoVersi} />
                     <div className="min-w-0">
                       <p className="truncate font-medium text-ink">{user.nama}</p>
                       <p className="text-sm text-ink-muted">

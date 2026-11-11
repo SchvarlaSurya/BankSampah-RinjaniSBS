@@ -8,6 +8,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Alert, EmptyState } from "@/components/ui/feedback";
 import { Stat } from "@/components/ui/page";
 import { BarisTransaksi } from "@/components/transaksi-tampilan";
+import { Avatar } from "@/components/avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -49,9 +50,7 @@ export default async function NasabahDashboardPage({
       <Card>
         <div className="flex flex-col gap-6 p-5 sm:p-6 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-4">
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-surface-muted text-lg font-semibold text-ink ring-1 ring-line ring-inset">
-              {profil.nama.charAt(0).toUpperCase()}
-            </span>
+            <Avatar nama={profil.nama} userId={sesi.userId} fotoVersi={sesi.fotoVersi} ukuran="lg" />
             <div className="min-w-0 space-y-1">
               <h2 className="text-xl font-semibold text-ink sm:text-2xl">{profil.nama}</h2>
               <p className="text-sm text-ink-muted">

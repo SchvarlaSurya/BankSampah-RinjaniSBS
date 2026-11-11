@@ -12,6 +12,7 @@ import {
   buatPengguna,
   gantiPassword,
   getLatestIdByRt,
+  hapusFotoProfil,
   hapusPengguna,
   koreksi,
   login,
@@ -22,6 +23,7 @@ import {
   setStatusPengguna,
   simpanJenisSampah,
   tarik,
+  unggahFotoProfil,
   updateHargaSampah,
 } from "./server-actions";
 
@@ -40,4 +42,6 @@ export const mockActions: Actions = {
   tarik,
   koreksi,
   sesuaikanSaldo,
+  unggahFotoProfil,
+  hapusFotoProfil,
 };

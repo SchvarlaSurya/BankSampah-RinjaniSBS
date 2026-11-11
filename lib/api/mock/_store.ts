@@ -42,6 +42,8 @@ interface MockState {
   /** SHA-256 foto setor -> transaksiId (foto tidak boleh dipakai dua kali). */
   hashFoto: Map<string, IdStr>;
   /** Log audit hapus akun (seperti tabel audit_akun). */
+  /** userId -> versi foto profil (mock tidak menyimpan file; route foto tetap 404). */
+  fotoProfil: Map<UserId, string>;
   auditAkun: { pelakuId: UserId; targetUserId: UserId; targetUsername: string; alasan: string; waktu: string }[];
 }
 
@@ -178,6 +180,7 @@ function buatState(): MockState {
     clientRequestIndex: new Map(),
     hashFoto: new Map(),
     auditAkun: [],
+    fotoProfil: new Map(),
   };
 }
 

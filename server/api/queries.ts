@@ -40,7 +40,7 @@ import { alasanTidakBisaDihapus, idUserLuar, punyaRiwayatSql, superAdminLainSql 
 import { idKeNumber, keNumberAman } from "../angka";
 import { db } from "../db";
 import { user } from "../db/auth-schema";
-import { priceHistory, transactions, wasteTypes } from "../db/schema";
+import { fotoProfil, priceHistory, transactions, wasteTypes } from "../db/schema";
 import { logServer } from "../errors";
 import { requireAkses } from "../guards";
 import { muatTransaksiDetail, namaPembuatSql, sudahDibalikSql } from "../transaksi";
@@ -72,8 +72,8 @@ export async function getSesi(): Promise<SesiInfo | null> {
   try {
     const g = await requireAkses("getSesi");
     if (!g.ok) return null;
-    const { userId, username, nama, role, mustChangePassword } = g.sesi;
-    return { userId, username, nama, role, mustChangePassword };
+    const { userId, username, nama, role, mustChangePassword, fotoVersi } = g.sesi;
+    return { userId, username, nama, role, mustChangePassword, fotoVersi };
   } catch (e) {
     unstable_rethrow(e); // redirect/notFound/dynamic-usage milik Next tidak boleh tertelan
     logServer("getSesi", e);
@@ -251,8 +251,10 @@ export async function listPengguna(input?: ListPenggunaInput): Promise<ActionRes
         // Hanya dihitung untuk super_admin (satu-satunya yang boleh menghapus akun).
         punyaRiwayat: sesi.role === "super_admin" ? punyaRiwayatSql(idUserLuar) : sql<boolean>`true`,
         superAdminLain: sesi.role === "super_admin" ? superAdminLainSql(idUserLuar) : sql<number>`0`,
+        fotoDiperbarui: fotoProfil.diperbaruiAt,
       })
       .from(user)
+      .leftJoin(fotoProfil, eq(fotoProfil.userId, user.id))
       .where(where)
       .orderBy(asc(user.role), asc(user.username))
       .limit(limit)
@@ -275,6 +277,7 @@ export async function listPengguna(input?: ListPenggunaInput): Promise<ActionRes
         createdAt: u.createdAt.toISOString(),
         bisaDihapus: alasan === null,
         alasanTidakBisaDihapus: alasan,
+        fotoVersi: u.fotoDiperbarui ? u.fotoDiperbarui.toISOString() : null,
       };
     });
     return ok({ items, total, limit, offset });

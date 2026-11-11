@@ -11,7 +11,7 @@ import {
 import { computeStreak } from "@/lib/streak";
 import { db } from "./db";
 import { user } from "./db/auth-schema";
-import { adminLoginDay, adminPresence, systemKeepalive } from "./db/schema";
+import { adminLoginDay, adminPresence, fotoProfil, systemKeepalive } from "./db/schema";
 import { logServer } from "./errors";
 import type { SesiServer } from "./guards";
 
@@ -98,11 +98,13 @@ export async function muatAktivitasAdmin(sesi: Pick<SesiServer, "userId" | "role
       username: user.username,
       role: user.role,
       lastSeenAt: adminPresence.lastSeenAt,
+      fotoDiperbarui: fotoProfil.diperbaruiAt,
       online: sql<boolean>`coalesce(${adminPresence.onlineSince} is not null
         and ${adminPresence.lastSeenAt} >= now() - make_interval(secs => ${PRESENCE.ONLINE_DETIK}), false)`,
     })
     .from(user)
     .leftJoin(adminPresence, eq(adminPresence.userId, user.id))
+    .leftJoin(fotoProfil, eq(fotoProfil.userId, user.id))
     .where(and(inArray(user.role, ["admin", "super_admin"]), eq(user.aktif, true)))
     .orderBy(asc(user.role), asc(user.name));
 
@@ -129,6 +131,7 @@ export async function muatAktivitasAdmin(sesi: Pick<SesiServer, "userId" | "role
     role: a.role === "super_admin" ? "super_admin" : "admin",
     online: a.online,
     lastSeenAt: a.lastSeenAt ? a.lastSeenAt.toISOString() : null,
+    fotoVersi: a.fotoDiperbarui ? a.fotoDiperbarui.toISOString() : null,
     streak: bolehLihatSemua || a.id === sesi.userId ? streakUntuk(a.id) : null,
   }));
 

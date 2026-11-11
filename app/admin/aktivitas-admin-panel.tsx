@@ -140,7 +140,7 @@ function KartuTim({ data, superAdmin }: { data: AktivitasAdmin; superAdmin: bool
       <ul className="divide-y divide-line">
         {data.tim.map((a) => (
           <li key={a.id} className="flex items-center gap-3 px-5 py-3">
-            <Avatar nama={a.nama} />
+            <Avatar nama={a.nama} userId={a.id} fotoVersi={a.fotoVersi} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-base font-medium text-ink">{a.nama}</p>
               <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-muted">
