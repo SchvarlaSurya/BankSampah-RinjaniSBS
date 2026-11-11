@@ -15,6 +15,8 @@ import type {
   BuatPenggunaInput,
   GantiPasswordInput,
   GetLatestIdByRtInput,
+  HapusPenggunaInput,
+  HapusPenggunaResult,
   LatestIdByRtResult,
   JenisSampah,
   KoreksiInput,
@@ -51,6 +53,7 @@ import {
   BuatPenggunaInputSchema,
   ResetPasswordInputSchema,
   SetStatusPenggunaInputSchema,
+  HapusPenggunaInputSchema,
   SimpanJenisSampahInputSchema,
   SetorInputSchema,
   TarikInputSchema,
@@ -59,7 +62,7 @@ import {
 } from "@/contract";
 import { createHash, randomInt } from "node:crypto";
 import { guard } from "./_guard";
-import { store, nextId, nowIso } from "./_store";
+import { store, nextId, nowIso, punyaRiwayat } from "./_store";
 
 /** Delay palsu (50ms). */
 const delay = () => new Promise<void>((r) => setTimeout(r, 50));
@@ -283,6 +286,36 @@ export async function setStatusPengguna(input: SetStatusPenggunaInput): Promise<
 }
 
 // ── Jenis Sampah ────────────────────────────────────────────────────────────
+
+export async function hapusPengguna(input: HapusPenggunaInput): Promise<ActionResult<HapusPenggunaResult>> {
+  await delay();
+  const g = guard("hapusPengguna");
+  if (!g.ok) return g.hasil;
+  const parsed = HapusPenggunaInputSchema.safeParse(input);
+  if (!parsed.success) return failDariZod(parsed.error);
+  const { userId, konfirmasi, alasan } = parsed.data;
+
+  const target = store.usersById.get(userId);
+  if (!target) return fail("PENGGUNA_TIDAK_DITEMUKAN");
+  if (userId === g.sesi.userId) return fail("TIDAK_BISA_HAPUS_DIRI");
+  if (konfirmasi !== target.username && konfirmasi !== target.nama) {
+    return fail("VALIDASI_GAGAL", { fieldErrors: { konfirmasi: ["Ketik ID atau nama akun persis seperti yang tertulis"] } });
+  }
+  const role = "role" in target ? target.role : "nasabah";
+  if (role === "super_admin" && !store.staf.some((s) => s.role === "super_admin" && s.aktif && s.id !== userId)) {
+    return fail("SUPER_ADMIN_TERAKHIR");
+  }
+  if (punyaRiwayat(userId) || ("saldo" in target && target.saldo !== 0)) return fail("AKUN_PUNYA_RIWAYAT");
+
+  store.staf = store.staf.filter((s) => s.id !== userId);
+  store.nasabah = store.nasabah.filter((n) => n.id !== userId);
+  store.usersById.delete(userId);
+  store.usersByUsername.delete(target.username);
+  store.passwords.delete(userId);
+  store.mustChangePassword.delete(userId);
+  store.auditAkun.push({ pelakuId: g.sesi.userId, targetUserId: userId, targetUsername: target.username, alasan, waktu: nowIso() });
+  return ok({ id: userId, username: target.username });
+}
 
 export async function simpanJenisSampah(input: SimpanJenisSampahInput): Promise<ActionResult<JenisSampah>> {
   await delay();

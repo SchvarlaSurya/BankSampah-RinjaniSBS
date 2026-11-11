@@ -15,6 +15,9 @@ import {
   failDariZod,
   GantiPasswordInputSchema,
   type GantiPasswordInput,
+  HapusPenggunaInputSchema,
+  type HapusPenggunaInput,
+  type HapusPenggunaResult,
   type JenisSampah,
   type KoreksiInput,
   KoreksiInputSchema,
@@ -50,6 +53,7 @@ import { user } from "../db/auth-schema";
 import { priceHistory, wasteTypes } from "../db/schema";
 import { constraintUnik, logServer, pgErrorDari, petaErrorDb } from "../errors";
 import { fotoStorage } from "../foto/storage";
+import { hapusAkun } from "../hapus-akun";
 import { periksaFoto } from "../foto/validasi";
 import type { NamaAkses, SesiServer } from "../guards";
 import { ipKlien } from "../ip";
@@ -270,6 +274,15 @@ export async function setStatusPengguna(input: SetStatusPenggunaInput): Promise<
     const pengguna = await penggunaRingkas(userId);
     if (!pengguna) return fail("PENGGUNA_TIDAK_DITEMUKAN");
     return ok(pengguna);
+  });
+}
+
+/** Hapus akun salah input (super_admin). Aturan lengkap di server/hapus-akun.ts. */
+export async function hapusPengguna(input: HapusPenggunaInput): Promise<ActionResult<HapusPenggunaResult>> {
+  return jalankan("hapusPengguna", async (sesi) => {
+    const parsed = HapusPenggunaInputSchema.safeParse(input);
+    if (!parsed.success) return failDariZod(parsed.error);
+    return hapusAkun(sesi.userId, parsed.data);
   });
 }
 

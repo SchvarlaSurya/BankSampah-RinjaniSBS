@@ -27,7 +27,7 @@ import {
   type TransaksiRingkas,
 } from "@/contract";
 import { guard } from "./_guard";
-import { store } from "./_store";
+import { punyaRiwayat, store } from "./_store";
 import { computeStreak } from "@/lib/streak";
 
 /** Delay palsu agar terasa realistis (50ms). */
@@ -171,12 +171,27 @@ export const mockQueries: Queries = {
       .filter((u) => !prefixRt || u.username.startsWith(prefixRt))
       .filter((u) => !q || u.username.toLowerCase().includes(q) || u.nama.toLowerCase().includes(q))
       .sort((a, b) => a.role.localeCompare(b.role) || a.username.localeCompare(b.username))
-      .map((u) => ({
-        ...u,
-        rt: u.role === "nasabah" && /^\d{2}/.test(u.username) ? u.username.slice(0, 2) : null,
-        mustChangePassword: store.mustChangePassword.get(u.id) ?? false,
-        createdAt: store.dibuatPada.get(u.id) ?? "2024-08-01T00:00:00.000Z",
-      }));
+      .map((u) => {
+        const superAdminLain = store.staf.filter((s) => s.role === "super_admin" && s.aktif && s.id !== u.id).length;
+        const alasan =
+          g.sesi.role !== "super_admin"
+            ? ("TIDAK_DIIZINKAN" as const)
+            : u.id === g.sesi.userId
+              ? ("TIDAK_BISA_HAPUS_DIRI" as const)
+              : u.role === "super_admin" && superAdminLain < 1
+                ? ("SUPER_ADMIN_TERAKHIR" as const)
+                : punyaRiwayat(u.id)
+                  ? ("AKUN_PUNYA_RIWAYAT" as const)
+                  : null;
+        return {
+          ...u,
+          rt: u.role === "nasabah" && /^\d{2}/.test(u.username) ? u.username.slice(0, 2) : null,
+          mustChangePassword: store.mustChangePassword.get(u.id) ?? false,
+          createdAt: store.dibuatPada.get(u.id) ?? "2024-08-01T00:00:00.000Z",
+          bisaDihapus: alasan === null,
+          alasanTidakBisaDihapus: alasan,
+        };
+      });
     return ok({ items: semua.slice(offset, offset + limit), total: semua.length, limit, offset });
   },
 

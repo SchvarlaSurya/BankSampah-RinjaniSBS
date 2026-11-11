@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fail } from "@/contract";
+import { type AktivitasAdmin, fail } from "@/contract";
 import { logout } from "@/server/api/actions";
 import { getAktivitasAdmin } from "@/server/api/queries";
 import { getKeepalive, getPresence, postPresence } from "@/server/aktivitas-admin-route";
@@ -83,8 +83,8 @@ describe("presence", () => {
     expect((await sbg(b, () => postPresence(reqPresence({ status: "online" })))).status).toBe(204);
     const res = await sbg(b, () => getPresence());
     expect(res.status).toBe(200);
-    const data = await res.json();
-    const saya = data.tim.find((x: { id: string }) => x.id === a.userId);
+    const data = (await res.json()) as AktivitasAdmin;
+    const saya = data.tim.find((x) => x.id === a.userId)!;
     expect(saya).toMatchObject({ online: true, role: "admin" });
     expect(typeof data.serverNow).toBe("string");
 
@@ -129,14 +129,14 @@ describe("getAktivitasAdmin: hak lihat streak ditegakkan di server", () => {
     const ba = await masuk(a);
     await masuk(lain);
     const res = await sbg(ba, () => getPresence());
-    const data = await res.json();
-    const sendiri = data.tim.find((x: { id: string }) => x.id === a.userId);
-    const orang = data.tim.find((x: { id: string }) => x.id === lain.userId);
+    const data = (await res.json()) as AktivitasAdmin;
+    const sendiri = data.tim.find((x) => x.id === a.userId)!;
+    const orang = data.tim.find((x) => x.id === lain.userId)!;
     expect(sendiri.streak).toMatchObject({ current: 1, sudahMasukHariIni: true });
     expect(orang.streak).toBeNull();
     expect(data.saya).toMatchObject({ current: 1 });
     // Tidak ada tanggal login orang lain di mana pun dalam payload.
-    expect(JSON.stringify(data.tim.filter((x: { id: string }) => x.id !== a.userId).map((x: { streak: unknown }) => x.streak)))
+    expect(JSON.stringify(data.tim.filter((x) => x.id !== a.userId).map((x) => x.streak)))
       .not.toContain("tanggal");
   });
 
@@ -182,9 +182,9 @@ describe("cron keepalive", () => {
   it("token benar -> UPSERT satu baris, jumlah_ping bertambah", async () => {
     const r1 = await getKeepalive(req("Bearer cron-tes-lokal-bukan-rahasia"));
     expect(r1.status).toBe(200);
-    const d1 = await r1.json();
+    const d1 = (await r1.json()) as { jumlahPing: number };
     const r2 = await getKeepalive(req("Bearer cron-tes-lokal-bukan-rahasia"));
-    const d2 = await r2.json();
+    const d2 = (await r2.json()) as { jumlahPing: number };
     expect(d2.jumlahPing).toBe(d1.jumlahPing + 1);
     const [r] = await owner`select count(*)::int as n from public.system_keepalive`;
     expect(r.n).toBe(1);

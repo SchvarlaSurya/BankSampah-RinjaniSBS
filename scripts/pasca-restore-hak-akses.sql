@@ -6,7 +6,7 @@
 --
 -- Isinya = semua pernyataan hak akses dari migration (roles_privileges_rls, ledger_integrity,
 -- ledger_functions, login_limiter_akses, price_history_akses, penyesuaian_fungsi,
--- aktivitas_admin_akses). Bila migration baru menambah GRANT/REVOKE, tambahkan
+-- aktivitas_admin_akses, audit_akun_akses). Bila migration baru menambah GRANT/REVOKE, tambahkan
 -- juga di sini. Role anon & authenticated harus sudah ada (bawaan Supabase / init script Docker).
 
 \set ON_ERROR_STOP on
@@ -72,5 +72,9 @@ GRANT SELECT, INSERT ON public.price_history TO app_server;
 REVOKE ALL ON public.admin_login_day, public.admin_presence, public.system_keepalive FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.admin_login_day, public.admin_presence TO app_server;
 GRANT SELECT, INSERT, UPDATE ON public.system_keepalive TO app_server;
+
+-- audit_akun_akses
+REVOKE ALL ON public.audit_akun FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT ON public.audit_akun TO app_server;
 
 COMMIT;
