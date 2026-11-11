@@ -28,6 +28,7 @@ import {
 } from "@/contract";
 import { guard } from "./_guard";
 import { store } from "./_store";
+import { computeStreak } from "@/lib/streak";
 
 /** Delay palsu agar terasa realistis (50ms). */
 const delay = () => new Promise<void>((r) => setTimeout(r, 50));
@@ -226,5 +227,32 @@ export const mockQueries: Queries = {
       .sort(idTurun)
       .map((t) => tampil(t, true));
     return ok(halaman(semua, cursor, limit));
+  },
+
+  async getAktivitasAdmin() {
+    await delay();
+    const g = guard("getAktivitasAdmin");
+    if (!g.ok) return g.hasil;
+    // Mock: tiap staf dianggap masuk hari ini saja; streak orang lain hanya untuk super_admin.
+    const sekarang = new Date();
+    const hariIni = tanggalWib(sekarang.toISOString());
+    const streakSaya = computeStreak([hariIni], hariIni);
+    const superAdmin = g.sesi.role === "super_admin";
+    return ok({
+      serverNow: sekarang.toISOString(),
+      hariIni,
+      saya: streakSaya,
+      tim: store.staf
+        .filter((s) => s.aktif)
+        .map((s) => ({
+          id: s.id,
+          nama: s.nama,
+          username: s.username,
+          role: s.role === "super_admin" ? ("super_admin" as const) : ("admin" as const),
+          online: s.id === g.sesi.userId,
+          lastSeenAt: s.id === g.sesi.userId ? sekarang.toISOString() : null,
+          streak: superAdmin || s.id === g.sesi.userId ? computeStreak([hariIni], hariIni) : null,
+        })),
+    });
   },
 };

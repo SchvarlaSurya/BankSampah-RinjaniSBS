@@ -67,6 +67,18 @@ export const LIMIT = {
 
 export const FOTO_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
 
+/**
+ * Presence admin (POST /api/admin/presence). Heartbeat hanya saat tab terlihat; dianggap online
+ * bila heartbeat terakhir dalam ONLINE_DETIK. Dashboard memuat ulang daftar tiap POLL_MS.
+ */
+export const PRESENCE = {
+  HEARTBEAT_MS: 30_000,
+  ONLINE_DETIK: 90,
+  POLL_MS: 10_000,
+} as const;
+
+export const ZONA_WAKTU = "Asia/Jakarta";
+
 /** Rute tetap. Frontend membuat halaman persis di path ini. */
 export const ROUTES = {
   login: "/login",
@@ -647,6 +659,44 @@ export interface ResetPasswordResult {
   passwordSementara: string;
 }
 
+/* --- Aktivitas admin (streak login harian & presence) --- */
+
+/** Tanggal kalender zona Asia/Jakarta, "YYYY-MM-DD". */
+export type TanggalWib = string;
+
+export interface StreakInfo {
+  /** Hari berturut-turut sampai hari ini (atau kemarin, bila hari ini belum masuk). 0 = putus. */
+  current: number;
+  /** Rekor terpanjang sepanjang masa. */
+  longest: number;
+  sudahMasukHariIni: boolean;
+  /** 7 hari terakhir, terlama dulu, hari ini paling akhir. */
+  tujuhHari: { tanggal: TanggalWib; masuk: boolean }[];
+}
+
+export interface AnggotaTimAdmin {
+  id: UserId;
+  nama: string;
+  username: string;
+  role: "admin" | "super_admin";
+  /** last_seen_at dalam PRESENCE.ONLINE_DETIK terakhir dan belum logout / tutup tab. */
+  online: boolean;
+  lastSeenAt: IsoUtc | null;
+  /**
+   * Streak anggota ini. Diisi server HANYA untuk super_admin (semua anggota) atau untuk diri
+   * sendiri (admin). Untuk admin lain selalu null: bukan disembunyikan UI, memang tidak dikirim.
+   */
+  streak: StreakInfo | null;
+}
+
+export interface AktivitasAdmin {
+  /** Jam server; klien memakai ini (bukan jam perangkat) untuk jam WIB berjalan. */
+  serverNow: IsoUtc;
+  hariIni: TanggalWib;
+  saya: StreakInfo;
+  tim: AnggotaTimAdmin[];
+}
+
 /* ========================================================================== */
 /* 9. ANTARMUKA API                                                            */
 /* ========================================================================== */
@@ -683,6 +733,11 @@ export interface Queries {
   getTransaksi(input: GetTransaksiInput): Promise<ActionResult<TransaksiDetail>>;
   /** super_admin. Transaksi + item + foto berdampingan, terbaru dulu. */
   auditTransaksi(input: AuditInput): Promise<ActionResult<Halaman<TransaksiDetail>>>;
+  /**
+   * admin, super_admin. Streak sendiri + daftar Tim Admin dengan status aktif. Streak anggota lain
+   * hanya untuk super_admin. Juga disajikan GET /api/admin/presence (dipolling dashboard).
+   */
+  getAktivitasAdmin(): Promise<ActionResult<AktivitasAdmin>>;
 }
 
 export interface Actions {
@@ -729,6 +784,7 @@ export const AKSES: Record<keyof Queries | keyof Actions, readonly Role[]> = {
   getHistori: ROLES,
   getTransaksi: ROLES,
   auditTransaksi: ["super_admin"],
+  getAktivitasAdmin: ["admin", "super_admin"],
   login: ROLES,
   logout: ROLES,
   gantiPassword: ROLES,

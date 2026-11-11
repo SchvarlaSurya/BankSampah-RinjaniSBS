@@ -3,11 +3,14 @@ import {
   bigint,
   boolean,
   check,
+  date,
   foreignKey,
   index,
   integer,
   numeric,
   pgTable,
+  primaryKey,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -212,4 +215,51 @@ export const priceHistory = pgTable(
     index("price_history_created_at_idx").on(t.createdAt.desc().nullsFirst()),
     index("price_history_diubah_oleh_idx").on(t.diubahOleh),
   ],
+);
+
+// ─── Aktivitas admin (streak login harian, presence, keepalive) ─────────────
+// Hanya admin & super_admin yang dicatat; nasabah tidak pernah. Baris ikut terhapus bersama
+// akunnya (ON DELETE CASCADE): data ini bukan riwayat keuangan.
+
+/** Satu baris per (admin, hari kalender Asia/Jakarta). Diisi lewat UPSERT, tidak pernah ganda. */
+export const adminLoginDay = pgTable(
+  "admin_login_day",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** Tanggal kalender WIB (batas hari = tengah malam Asia/Jakarta). */
+    loginDate: date("login_date", { mode: "string" }).notNull(),
+    firstAt: timestamp("first_at", { withTimezone: true }).notNull().defaultNow(),
+    lastAt: timestamp("last_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Jumlah login (sign-in) hari itu; aktivitas dengan sesi lama hanya memperbarui last_at. */
+    count: integer("count").notNull().default(1),
+  },
+  (t) => [
+    primaryKey({ name: "admin_login_day_pkey", columns: [t.userId, t.loginDate] }),
+    check("admin_login_day_count_positif", sql`${t.count} >= 0`),
+  ],
+);
+
+/** Siapa yang sedang aktif. online_since NULL = offline (logout / tab ditutup). */
+export const adminPresence = pgTable("admin_presence", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  onlineSince: timestamp("online_since", { withTimezone: true }),
+});
+
+/**
+ * Pengaman keepalive: cron harian menulis satu baris ini supaya database selalu punya perubahan
+ * walau tidak ada admin yang login (Supabase gratis dijeda bila tidak aktif).
+ */
+export const systemKeepalive = pgTable(
+  "system_keepalive",
+  {
+    id: smallint("id").primaryKey().default(1),
+    lastPingAt: timestamp("last_ping_at", { withTimezone: true }).notNull().defaultNow(),
+    jumlahPing: bigint("jumlah_ping", { mode: "number" }).notNull().default(1),
+  },
+  (t) => [check("system_keepalive_satu_baris", sql`${t.id} = 1`)],
 );

@@ -5,6 +5,7 @@ import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import {
   type ActionResult,
+  type AktivitasAdmin,
   type AuditInput,
   AuditInputSchema,
   type CariNasabahInput,
@@ -34,6 +35,7 @@ import {
   type TransaksiDetail,
   type TransaksiRingkas,
 } from "@/contract";
+import { muatAktivitasAdmin } from "../aktivitas-admin";
 import { idKeNumber, keNumberAman } from "../angka";
 import { db } from "../db";
 import { user } from "../db/auth-schema";
@@ -374,6 +376,11 @@ export async function auditTransaksi(input: AuditInput): Promise<ActionResult<Ha
   });
 }
 
+/** Streak & Tim Admin. Hak lihat streak orang lain ditegakkan di muatAktivitasAdmin. */
+export async function getAktivitasAdmin(): Promise<ActionResult<AktivitasAdmin>> {
+  return jalankan("getAktivitasAdmin", async (sesi) => ok(await muatAktivitasAdmin(sesi)));
+}
+
 /** Objek untuk saklar frontend (lib/api/queries.ts). Dicek `Queries` oleh tsc. */
 export const realQueries: Queries = {
   getSesi,
@@ -387,4 +394,5 @@ export const realQueries: Queries = {
   getHistori,
   getTransaksi,
   auditTransaksi,
+  getAktivitasAdmin,
 };

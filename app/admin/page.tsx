@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { queries } from "@/lib/api/queries";
-import { formatRupiah, redirectUntukError, type NasabahRingkas } from "@/contract";
+import { formatRupiah, redirectUntukError, type AktivitasAdmin, type NasabahRingkas } from "@/contract";
 import { ChevronRight, Search, UserX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Alert, EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page";
+import { AktivitasAdminPanel } from "./aktivitas-admin-panel";
 import { CariNasabahForm } from "./cari-nasabah-form";
 
 /** Minimal 2 karakter (CariNasabahInputSchema); di bawah itu tidak memanggil query. */
@@ -19,6 +20,13 @@ export default async function AdminSearchPage({
 }) {
   const raw = (await searchParams).q;
   const query = (typeof raw === "string" ? raw : "").trim();
+
+  const [sesi, aktivitasRes] = await Promise.all([queries.getSesi(), queries.getAktivitasAdmin()]);
+  if (!aktivitasRes.ok) {
+    const redir = redirectUntukError(aktivitasRes.code);
+    if (redir) redirect(redir);
+  }
+  const aktivitas: AktivitasAdmin | null = aktivitasRes.ok ? aktivitasRes.data : null;
 
   let nasabahList: NasabahRingkas[] = [];
   let errorMessage: string | null = null;
@@ -35,6 +43,8 @@ export default async function AdminSearchPage({
 
   return (
     <div className="space-y-6">
+      {aktivitas && <AktivitasAdminPanel awal={aktivitas} superAdmin={sesi?.role === "super_admin"} />}
+
       <PageHeader description="Temukan nasabah lewat ID atau nama untuk mencatat setor sampah, penarikan, atau penyesuaian saldo." />
 
       <Card className="p-4 sm:p-5">

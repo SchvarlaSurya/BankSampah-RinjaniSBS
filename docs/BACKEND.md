@@ -9,13 +9,17 @@ sudah ada di `server/api/` dan diperiksa compiler lewat `server/api/conformance.
 |---|---|
 | `server/api/actions.ts` | Server Actions (`"use server"`): login, logout, gantiPassword, buatPengguna, getLatestIdByRt, resetPasswordPengguna, setStatusPengguna, simpanJenisSampah, updateHargaSampah, setor, tarik, koreksi, sesuaikanSaldo |
 | `server/api/real-actions.ts` | Objek `realActions: Actions` untuk saklar frontend (tanpa `server-only`, boleh diimpor Client Component) |
-| `server/api/queries.ts` | Query (`server-only`): getSesi, getProfilSaya, cariNasabah, getNasabah, listJenisSampah, listRiwayatHarga, listStaf, listPengguna, getHistori, getTransaksi, auditTransaksi + objek `realQueries: Queries` |
+| `server/api/queries.ts` | Query (`server-only`): getSesi, getProfilSaya, cariNasabah, getNasabah, listJenisSampah, listRiwayatHarga, listStaf, listPengguna, getHistori, getTransaksi, auditTransaksi, getAktivitasAdmin + objek `realQueries: Queries` |
+| `server/aktivitas-admin.ts` | Login harian (UPSERT `admin_login_day`), heartbeat/offline (`admin_presence`), data dashboard streak + Tim Admin, keepalive |
+| `server/aktivitas-admin-route.ts` | Logika route `/api/admin/presence` (GET/POST) dan `/api/cron/keepalive` |
+| `lib/streak.ts` | `computeStreak(tanggal[], hariIniWIB)` fungsi murni + `tanggalWib` |
 | `server/api/conformance.ts` | Pemeriksaan tipe `Queries`/`Actions` (tsc saja) |
 | `server/guards.ts` | `requireAkses(nama)`: urutan kontrak Bagian 8.1 |
 | `server/auth.ts` | Konfigurasi Better Auth 1.7.6 |
 | `server/foto/*` | Validasi foto, FotoStorage (local / supabase), route dev |
 | `server/konfigurasi.ts` | Validasi env (zod) |
-| `app/api/dev-foto/[name]/route.ts` | Route DEV foto lokal (satu-satunya file backend di `app/`) |
+| `app/api/dev-foto/[name]/route.ts` | Route DEV foto lokal |
+| `app/api/admin/presence/route.ts`, `app/api/cron/keepalive/route.ts` | Route presence admin & cron keepalive (memuat modul server secara dinamis) |
 | `drizzle/` | Migration (lihat urutan di bawah) |
 
 Setiap fungsi: `requireAkses` (sesi → wajib ganti password → AKSES, role dibaca dari DB tiap
@@ -65,6 +69,7 @@ Contoh lengkap di `.env.example`. Di produksi (Vercel) isi lewat Environment Var
 | `SUPABASE_URL` | bila supabase | URL proyek Supabase (Storage) | `https://<ref>.supabase.co` |
 | `SUPABASE_SERVICE_ROLE_KEY` | bila supabase | Kunci service role, HANYA di server, jangan `NEXT_PUBLIC_` | `<service-role-key>` |
 | `FOTO_BUCKET` | tidak | Nama bucket PRIVATE (default `foto-timbangan`) | `foto-timbangan` |
+| `CRON_SECRET` | tidak | Rahasia `GET /api/cron/keepalive` (header `Authorization: Bearer ...`; Vercel Cron mengirimnya otomatis). Kosong = endpoint 503 | `<acak-minimal-16-karakter>` |
 | `SEED_SUPERADMIN_USERNAME` / `SEED_SUPERADMIN_NAMA` | seed | Untuk `npm run seed:superadmin` | `kepala` / `Kepala Bank Sampah` |
 | `RESET_SUPERADMIN_USERNAME` | reset | Untuk `npm run reset:superadmin` | `kepala` |
 
@@ -90,6 +95,8 @@ Secret GitHub Actions (hanya workflow backup): `SUPABASE_DB_URL` (owner, 5432) d
    11. `20261014013750_price_history_akses` — GRANT SELECT/INSERT + RLS `price_history` untuk app_server
    12. `20261014023416_penyesuaian_skema` — tipe transaksi `penyesuaian` + CHECK (alasan wajib, tanpa foto/reverses_id)
    13. `20261014023437_penyesuaian_fungsi` — fungsi SQL `penyesuaian` (EXECUTE hanya app_server)
+   14. `20261111020325_aktivitas_admin` — tabel `admin_login_day`, `admin_presence`, `system_keepalive`
+   15. `20261111020357_aktivitas_admin_akses` — GRANT + RLS tabel aktivitas admin
    Migration pertama ke Supabase membekukan riwayat: setelah itu perubahan hanya lewat migration BARU.
 2. Set password `app_server` (tidak ada di migration): konek sebagai `postgres` dengan psql lalu
    `\password app_server`, isi `DATABASE_URL` dengan username `app_server.<project-ref>`.
@@ -178,6 +185,19 @@ dan tes.
   `getLatestIdByRt` hanya saran ID berikutnya, `buatPengguna` tetap menolak duplikat.
 - `auditTransaksi`: `dari`/`sampai` = tanggal kalender Asia/Jakarta, inklusif.
 - Handler HTTP Better Auth (`/api/auth/*`) TIDAK di-mount; semua auth lewat Server Action.
+- **Streak login harian** (admin & super_admin; nasabah tidak pernah dicatat): satu baris
+  `admin_login_day` per (akun, tanggal WIB) lewat UPSERT. Dicatat oleh hook sesi Better Auth saat
+  login berhasil DAN oleh heartbeat pertama hari itu (sesi bisa bertahan berhari-hari). Aturan
+  streak di `lib/streak.ts`: hari terlewat = mulai lagi dari 1; hari ini belum masuk tapi kemarin
+  masuk = belum putus. Admin biasa hanya menerima streak miliknya; streak orang lain `null` di
+  payload (ditegakkan di `muatAktivitasAdmin`). Super_admin menerima streak semua staf.
+- **Presence**: `POST /api/admin/presence` tiap 30 detik saat tab terlihat (`{status:"offline"}`
+  lewat sendBeacon saat tab ditutup; logout juga menandai offline). Online = heartbeat ≤ 90 detik
+  lalu dan belum offline. `GET` = data dashboard + `serverNow`, dipolling tiap 10 detik. 401/403
+  menghentikan klien. POST dengan header Origin asing ditolak 403.
+- **Keepalive**: `GET /api/cron/keepalive` (Bearer `CRON_SECRET`) meng-UPSERT `system_keepalive`
+  supaya database Supabase gratis selalu punya perubahan harian walau tidak ada admin login.
+  Dijadwalkan `vercel.json` 23:00 UTC (06:00 WIB). Set `CRON_SECRET` di Vercel.
 
 ## BELUM TERUJI
 
