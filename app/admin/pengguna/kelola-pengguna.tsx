@@ -11,8 +11,8 @@ import {
 import {
   Users,
   UserPlus,
-  UserCheck,
   UserX,
+  Settings2,
   Loader2,
   CheckCircle2,
   RefreshCw,
@@ -29,7 +29,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Alert, EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/page";
-import ResetPasswordDialog from "@/components/ResetPasswordDialog";
+import { KelolaAkunPanel } from "./kelola-akun-panel";
 
 export const RT_OPTIONS = [
   { id: "01", label: "RT 01" },
@@ -77,6 +77,9 @@ export function KelolaPengguna({
   } | null>(null);
   const [copied, setCopied] = useState(false);
   const [formErrorMessage, setFormErrorMessage] = useState<string | null>(null);
+  // Panel "Kelola akun" yang sedang terbuka (satu per satu) + pesan sukses hapus akun.
+  const [kelolaTerbuka, setKelolaTerbuka] = useState<string | null>(null);
+  const [pesanSukses, setPesanSukses] = useState<string | null>(null);
 
   // Read Filter parameters from URL
   const urlSearch = searchParams.get("search") || "";
@@ -220,13 +223,6 @@ export function KelolaPengguna({
     }
   }
 
-  async function handleToggleStatus(userId: string, currentAktif: boolean) {
-    const res = await actions.setStatusPengguna({ userId, aktif: !currentAktif });
-    if (res.ok) {
-      fetchTableData();
-    }
-  }
-
   function handleCopyCredentials() {
     if (!createResult) return;
     const text = `Akun Bank Sampah Rinjani SBS:\nID Nasabah / Username: ${createResult.username}\nPassword Sementara: ${createResult.passwordSementara}\nNama: ${createResult.nama}`;
@@ -264,6 +260,19 @@ export function KelolaPengguna({
           }
         >
           {formErrorMessage}
+        </Alert>
+      )}
+
+      {pesanSukses && (
+        <Alert
+          tone="success"
+          action={
+            <button type="button" onClick={() => setPesanSukses(null)} className="text-sm font-medium underline underline-offset-2">
+              Tutup
+            </button>
+          }
+        >
+          {pesanSukses}
         </Alert>
       )}
 
@@ -573,14 +582,12 @@ export function KelolaPengguna({
         ) : (
           <ul className="divide-y divide-line">
             {dataHalaman.items.map((user) => {
-              const isTargetSuperAdmin = user.role === "super_admin";
               const isSelf = user.id === sesi?.userId;
+              const terbuka = kelolaTerbuka === user.id;
 
               return (
-                <li
-                  key={user.id}
-                  className="flex flex-col gap-3 px-5 py-3.5 transition-colors duration-150 hover:bg-brand-soft sm:flex-row sm:items-center sm:gap-4"
-                >
+                <li key={user.id} className="px-5 py-3.5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                   <div className="flex min-w-0 flex-1 items-center gap-3">
                     <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-muted font-semibold text-ink ring-1 ring-line ring-inset">
                       {user.nama.charAt(0).toUpperCase()}
@@ -603,28 +610,33 @@ export function KelolaPengguna({
                   </div>
 
                   {isSuperAdmin && !isSelf && (
-                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                      {/* Reset Password Button: Hanya untuk super_admin, pada akun non-super_admin dan bukan diri sendiri */}
-                      {!isTargetSuperAdmin && (
-                        <ResetPasswordDialog
-                          userId={user.id}
-                          username={user.username}
-                          nama={user.nama}
-                          role={user.role}
-                        />
-                      )}
-
-                      {/* Toggle Status Button */}
-                      <Button
-                        variant="secondary"
-                        onClick={() => handleToggleStatus(user.id, user.aktif)}
-                        aria-label={`${user.aktif ? "Nonaktifkan" : "Aktifkan"} ${user.nama}`}
-                      >
-                        {user.aktif ? <UserX /> : <UserCheck />}
-                        <span>{user.aktif ? "Nonaktifkan" : "Aktifkan"}</span>
-                      </Button>
-                    </div>
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      onClick={() => setKelolaTerbuka(terbuka ? null : user.id)}
+                      aria-expanded={terbuka}
+                      aria-controls={`kelola-${user.id}`}
+                      className="w-full sm:w-auto"
+                    >
+                      <Settings2 />
+                      <span>{terbuka ? "Tutup" : "Kelola akun"}</span>
+                    </Button>
                   )}
+                </div>
+
+                {isSuperAdmin && !isSelf && terbuka && (
+                  <div id={`kelola-${user.id}`} className="mt-3">
+                    <KelolaAkunPanel
+                      pengguna={user}
+                      onBerubah={fetchTableData}
+                      onTerhapus={(pesan) => {
+                        setKelolaTerbuka(null);
+                        setPesanSukses(pesan);
+                        fetchTableData();
+                      }}
+                    />
+                  </div>
+                )}
                 </li>
               );
             })}

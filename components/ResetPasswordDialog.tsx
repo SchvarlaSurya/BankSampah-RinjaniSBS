@@ -12,8 +12,11 @@ interface ResetPasswordDialogProps {
   username: string;
   nama: string;
   role?: "admin" | "nasabah" | "super_admin";
-  /** "kecil" = tombol ringkas (halaman detail nasabah). Props harus serializable: komponen ini dipakai dari Server Component. */
-  varian?: "default" | "kecil";
+  /**
+   * "kecil" = tombol ringkas (halaman detail nasabah); "panel" = tombol 48px selebar kartu di HP
+   * (panel Kelola akun). Props harus serializable: komponen ini dipakai dari Server Component.
+   */
+  varian?: "default" | "kecil" | "panel";
   onSuccess?: () => void;
 }
 
@@ -96,7 +99,7 @@ export default function ResetPasswordDialog({
             setErrorMessage(null);
             setConfirmOpen(true);
           }}
-          className={buttonClass("secondary")}
+          className={varian === "panel" ? buttonClass("secondary", "lg", "w-full sm:w-auto") : buttonClass("secondary")}
           title={`Reset password untuk ${nama}`}
         >
           <KeyRound aria-hidden="true" />

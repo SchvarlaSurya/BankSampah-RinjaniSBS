@@ -263,3 +263,33 @@ export const systemKeepalive = pgTable(
   },
   (t) => [check("system_keepalive_satu_baris", sql`${t.id} = 1`)],
 );
+
+// ─── Log audit akun ─────────────────────────────────────────────────────────
+// Append-only (app_server hanya SELECT & INSERT). Data target DISALIN (bukan FK) supaya log tetap
+// utuh setelah akunnya dihapus. pelaku_id ber-FK tanpa cascade: staf yang tercatat sebagai pelaku
+// tidak bisa dihapus (syarat hapus akun: belum tercatat di transaksi atau log audit mana pun).
+export const auditAkun = pgTable(
+  "audit_akun",
+  {
+    id: bigint("id", { mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    aksi: text("aksi", { enum: ["hapus_akun"] }).notNull(),
+    pelakuId: text("pelaku_id")
+      .notNull()
+      .references(() => user.id),
+    targetUserId: text("target_user_id").notNull(),
+    targetUsername: text("target_username").notNull(),
+    targetNama: text("target_nama").notNull(),
+    targetRole: text("target_role", { enum: ["super_admin", "admin", "nasabah"] }).notNull(),
+    alasan: text("alasan").notNull(),
+    waktu: timestamp("waktu", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check("audit_akun_aksi_valid", sql`${t.aksi} IN ('hapus_akun')`),
+    check("audit_akun_target_role_valid", sql`${t.targetRole} IN ('super_admin', 'admin', 'nasabah')`),
+    check("audit_akun_alasan_wajib", sql`btrim(${t.alasan}) <> ''`),
+    index("audit_akun_pelaku_id_idx").on(t.pelakuId),
+    index("audit_akun_waktu_idx").on(t.waktu.desc().nullsFirst()),
+  ],
+);

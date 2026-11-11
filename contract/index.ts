@@ -108,6 +108,9 @@ export const ERROR_CODES = [
   "USERNAME_SUDAH_ADA",
   "PENGGUNA_TIDAK_DITEMUKAN",
   "TIDAK_BISA_NONAKTIFKAN_DIRI",
+  "TIDAK_BISA_HAPUS_DIRI",
+  "AKUN_PUNYA_RIWAYAT",
+  "SUPER_ADMIN_TERAKHIR",
   // nasabah & jenis sampah
   "NASABAH_TIDAK_DITEMUKAN",
   "NASABAH_NONAKTIF",
@@ -164,6 +167,9 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   USERNAME_SUDAH_ADA: "ID tersebut sudah dipakai.",
   PENGGUNA_TIDAK_DITEMUKAN: "Pengguna tidak ditemukan.",
   TIDAK_BISA_NONAKTIFKAN_DIRI: "Anda tidak bisa menonaktifkan akun Anda sendiri.",
+  TIDAK_BISA_HAPUS_DIRI: "Anda tidak bisa menghapus akun Anda sendiri.",
+  AKUN_PUNYA_RIWAYAT: "Akun ini sudah punya riwayat. Gunakan Nonaktifkan.",
+  SUPER_ADMIN_TERAKHIR: "Super admin terakhir tidak bisa dihapus.",
   NASABAH_TIDAK_DITEMUKAN: "Nasabah tidak ditemukan.",
   NASABAH_NONAKTIF: "Akun nasabah ini nonaktif.",
   JENIS_SAMPAH_TIDAK_VALID: "Jenis sampah tidak ada atau sudah dinonaktifkan.",
@@ -368,6 +374,16 @@ export const BuatPenggunaInputSchema = z.object({
 export const ResetPasswordInputSchema = z.object({ userId });
 export const SetStatusPenggunaInputSchema = z.object({ userId, aktif: z.boolean() });
 
+/**
+ * Hapus akun (koreksi salah tambah akun). `konfirmasi` harus sama PERSIS dengan ID (username) atau
+ * nama akun target; dicocokkan di server terhadap data DB, bukan data dari klien.
+ */
+export const HapusPenggunaInputSchema = z.object({
+  userId,
+  konfirmasi: z.string().trim().min(1, "Ketik ID atau nama akun").max(64),
+  alasan: z.string().trim().min(LIMIT.ALASAN_MIN, `Minimal ${LIMIT.ALASAN_MIN} karakter`).max(LIMIT.ALASAN_MAKS),
+});
+
 export const ListPenggunaInputSchema = z.object({
   search: z.string().trim().max(64).optional(),
   /** Filter role. Untuk admin diabaikan: server memaksa "nasabah". */
@@ -476,6 +492,7 @@ export type GantiPasswordInput = z.input<typeof GantiPasswordInputSchema>;
 export type BuatPenggunaInput = z.input<typeof BuatPenggunaInputSchema>;
 export type ResetPasswordInput = z.input<typeof ResetPasswordInputSchema>;
 export type SetStatusPenggunaInput = z.input<typeof SetStatusPenggunaInputSchema>;
+export type HapusPenggunaInput = z.input<typeof HapusPenggunaInputSchema>;
 export type ListPenggunaInput = z.input<typeof ListPenggunaInputSchema>;
 export type GetLatestIdByRtInput = z.input<typeof GetLatestIdByRtInputSchema>;
 export type RiwayatHargaInput = z.input<typeof RiwayatHargaInputSchema>;
@@ -545,6 +562,13 @@ export interface PenggunaDetail extends PenggunaRingkas {
   rt: string | null;
   mustChangePassword: boolean;
   createdAt: IsoUtc;
+  /**
+   * Hanya bermakna untuk super_admin (selain itu selalu false). false + alasan bila akun sudah punya
+   * riwayat (transaksi sebagai nasabah/petugas, riwayat harga, log audit), akun sendiri, atau
+   * super_admin terakhir. Server tetap mengecek ulang saat hapusPengguna.
+   */
+  bisaDihapus: boolean;
+  alasanTidakBisaDihapus: ErrorCode | null;
 }
 
 export interface HalamanPengguna {
@@ -659,6 +683,12 @@ export interface ResetPasswordResult {
   passwordSementara: string;
 }
 
+export interface HapusPenggunaResult {
+  id: UserId;
+  /** ID ini kosong lagi dan boleh dipakai ulang untuk akun baru. */
+  username: string;
+}
+
 /* --- Aktivitas admin (streak login harian & presence) --- */
 
 /** Tanggal kalender zona Asia/Jakarta, "YYYY-MM-DD". */
@@ -753,6 +783,12 @@ export interface Actions {
   resetPasswordPengguna(input: ResetPasswordInput): Promise<ActionResult<ResetPasswordResult>>;
   /** super_admin. Tidak bisa menonaktifkan diri sendiri. */
   setStatusPengguna(input: SetStatusPenggunaInput): Promise<ActionResult<PenggunaRingkas>>;
+  /**
+   * super_admin. Hapus akun yang salah dibuat: hanya bila belum punya riwayat apa pun (saldo 0,
+   * tanpa transaksi, tidak tercatat sebagai petugas/pelaku). Bukan diri sendiri, bukan super_admin
+   * terakhir. Satu transaksi DB, syarat dicek ulang di dalamnya, dicatat di audit_akun.
+   */
+  hapusPengguna(input: HapusPenggunaInput): Promise<ActionResult<HapusPenggunaResult>>;
   /** admin, super_admin. Buat (tanpa id) atau ubah (dengan id). Perubahan harga hanya berlaku untuk transaksi berikutnya; perubahan harga beli dicatat di riwayat harga. */
   simpanJenisSampah(input: SimpanJenisSampahInput): Promise<ActionResult<JenisSampah>>;
   /** Sama dengan simpanJenisSampah (nama yang dipakai halaman katalog). */
@@ -792,6 +828,7 @@ export const AKSES: Record<keyof Queries | keyof Actions, readonly Role[]> = {
   getLatestIdByRt: ["admin", "super_admin"],
   resetPasswordPengguna: ["super_admin"],
   setStatusPengguna: ["super_admin"],
+  hapusPengguna: ["super_admin"],
   simpanJenisSampah: ["admin", "super_admin"],
   updateHargaSampah: ["admin", "super_admin"],
   setor: ["admin", "super_admin"],

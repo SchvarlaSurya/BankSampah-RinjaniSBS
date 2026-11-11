@@ -39,6 +39,9 @@ describe("listPengguna", () => {
         rt,
         mustChangePassword: false,
         createdAt: expect.stringMatching(/Z$/),
+        // Nasabah baru tanpa transaksi: boleh dihapus super_admin.
+        bisaDihapus: true,
+        alasanTidakBisaDihapus: null,
       },
       expect.objectContaining({ id: n2.userId, aktif: false, rt }),
     ]);

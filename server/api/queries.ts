@@ -36,6 +36,7 @@ import {
   type TransaksiRingkas,
 } from "@/contract";
 import { muatAktivitasAdmin } from "../aktivitas-admin";
+import { alasanTidakBisaDihapus, idUserLuar, punyaRiwayatSql, superAdminLainSql } from "../hapus-akun";
 import { idKeNumber, keNumberAman } from "../angka";
 import { db } from "../db";
 import { user } from "../db/auth-schema";
@@ -247,6 +248,9 @@ export async function listPengguna(input?: ListPenggunaInput): Promise<ActionRes
         aktif: user.aktif,
         mustChangePassword: user.mustChangePassword,
         createdAt: user.createdAt,
+        // Hanya dihitung untuk super_admin (satu-satunya yang boleh menghapus akun).
+        punyaRiwayat: sesi.role === "super_admin" ? punyaRiwayatSql(idUserLuar) : sql<boolean>`true`,
+        superAdminLain: sesi.role === "super_admin" ? superAdminLainSql(idUserLuar) : sql<number>`0`,
       })
       .from(user)
       .where(where)
@@ -256,6 +260,10 @@ export async function listPengguna(input?: ListPenggunaInput): Promise<ActionRes
 
     const items = rows.map((u): PenggunaDetail => {
       const username = u.username ?? "";
+      const alasan =
+        sesi.role === "super_admin"
+          ? alasanTidakBisaDihapus({ id: u.id, role: u.role, punyaRiwayat: u.punyaRiwayat, superAdminLain: u.superAdminLain, pelakuId: sesi.userId })
+          : "TIDAK_DIIZINKAN";
       return {
         id: u.id,
         username,
@@ -265,6 +273,8 @@ export async function listPengguna(input?: ListPenggunaInput): Promise<ActionRes
         rt: u.role === "nasabah" && /^\d{2}/.test(username) ? username.slice(0, 2) : null,
         mustChangePassword: u.mustChangePassword,
         createdAt: u.createdAt.toISOString(),
+        bisaDihapus: alasan === null,
+        alasanTidakBisaDihapus: alasan,
       };
     });
     return ok({ items, total, limit, offset });

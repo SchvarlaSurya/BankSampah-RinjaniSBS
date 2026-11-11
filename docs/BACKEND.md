@@ -7,11 +7,12 @@ sudah ada di `server/api/` dan diperiksa compiler lewat `server/api/conformance.
 
 | File | Isi |
 |---|---|
-| `server/api/actions.ts` | Server Actions (`"use server"`): login, logout, gantiPassword, buatPengguna, getLatestIdByRt, resetPasswordPengguna, setStatusPengguna, simpanJenisSampah, updateHargaSampah, setor, tarik, koreksi, sesuaikanSaldo |
+| `server/api/actions.ts` | Server Actions (`"use server"`): login, logout, gantiPassword, buatPengguna, getLatestIdByRt, resetPasswordPengguna, setStatusPengguna, hapusPengguna, simpanJenisSampah, updateHargaSampah, setor, tarik, koreksi, sesuaikanSaldo |
 | `server/api/real-actions.ts` | Objek `realActions: Actions` untuk saklar frontend (tanpa `server-only`, boleh diimpor Client Component) |
 | `server/api/queries.ts` | Query (`server-only`): getSesi, getProfilSaya, cariNasabah, getNasabah, listJenisSampah, listRiwayatHarga, listStaf, listPengguna, getHistori, getTransaksi, auditTransaksi, getAktivitasAdmin + objek `realQueries: Queries` |
 | `server/aktivitas-admin.ts` | Login harian (UPSERT `admin_login_day`), heartbeat/offline (`admin_presence`), data dashboard streak + Tim Admin, keepalive |
 | `server/aktivitas-admin-route.ts` | Logika route `/api/admin/presence` (GET/POST) dan `/api/cron/keepalive` |
+| `server/hapus-akun.ts` | Aturan & proses hapus akun (satu transaksi DB, cek ulang, log `audit_akun`) |
 | `lib/streak.ts` | `computeStreak(tanggal[], hariIniWIB)` fungsi murni + `tanggalWib` |
 | `server/api/conformance.ts` | Pemeriksaan tipe `Queries`/`Actions` (tsc saja) |
 | `server/guards.ts` | `requireAkses(nama)`: urutan kontrak Bagian 8.1 |
@@ -97,6 +98,8 @@ Secret GitHub Actions (hanya workflow backup): `SUPABASE_DB_URL` (owner, 5432) d
    13. `20261014023437_penyesuaian_fungsi` — fungsi SQL `penyesuaian` (EXECUTE hanya app_server)
    14. `20261111020325_aktivitas_admin` — tabel `admin_login_day`, `admin_presence`, `system_keepalive`
    15. `20261111020357_aktivitas_admin_akses` — GRANT + RLS tabel aktivitas admin
+   16. `20261111022100_audit_akun` — tabel log `audit_akun` (hapus akun)
+   17. `20261111022107_audit_akun_akses` — GRANT SELECT/INSERT (append-only) + RLS `audit_akun`
    Migration pertama ke Supabase membekukan riwayat: setelah itu perubahan hanya lewat migration BARU.
 2. Set password `app_server` (tidak ada di migration): konek sebagai `postgres` dengan psql lalu
    `\password app_server`, isi `DATABASE_URL` dengan username `app_server.<project-ref>`.
@@ -195,6 +198,16 @@ dan tes.
   lewat sendBeacon saat tab ditutup; logout juga menandai offline). Online = heartbeat ≤ 90 detik
   lalu dan belum offline. `GET` = data dashboard + `serverNow`, dipolling tiap 10 detik. 401/403
   menghentikan klien. POST dengan header Origin asing ditolak 403.
+- **Hapus akun** (`hapusPengguna`, super_admin saja): untuk koreksi akun yang salah dibuat.
+  Ditolak bila akun punya riwayat apa pun (`AKUN_PUNYA_RIWAYAT`: transaksi sebagai nasabah atau
+  petugas, riwayat harga, atau pernah menjadi pelaku di `audit_akun`), akun sendiri
+  (`TIDAK_BISA_HAPUS_DIRI`), atau super_admin aktif terakhir (`SUPER_ADMIN_TERAKHIR`). Wajib
+  `konfirmasi` = ID atau nama persis dan `alasan`. Satu transaksi DB: baris target `FOR UPDATE`,
+  syarat dicek ulang, FK ke `user` jadi pengaman terakhir (23503 → `AKUN_PUNYA_RIWAYAT`). Yang
+  dihapus: user, account, session, admin_login_day, admin_presence, kunci login per-username.
+  `audit_akun` (append-only) menyimpan pelaku, waktu, ID, nama, peran, alasan; tetap ada setelah
+  akun terhapus. ID yang dihapus kosong lagi dan boleh dipakai ulang. `listPengguna` mengirim
+  `bisaDihapus` + `alasanTidakBisaDihapus` untuk super_admin (tombol nonaktif + penjelasan).
 - **Keepalive**: `GET /api/cron/keepalive` (Bearer `CRON_SECRET`) meng-UPSERT `system_keepalive`
   supaya database Supabase gratis selalu punya perubahan harian walau tidak ada admin login.
   Dijadwalkan `vercel.json` 23:00 UTC (06:00 WIB). Set `CRON_SECRET` di Vercel.
