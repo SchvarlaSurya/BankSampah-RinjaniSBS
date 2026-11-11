@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Avatar } from "@/components/avatar";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { LogoSbs } from "@/components/shell/logo";
 import { JudulBagian, NavBawah, NavSidebar, type ItemNav } from "@/components/shell/nav";
@@ -14,6 +15,9 @@ export function AppShell({
   menu,
   akar,
   nama,
+  userId,
+  fotoVersi,
+  akunHref,
   peran,
   nadaPeran,
   aksiSidebar,
@@ -23,6 +27,10 @@ export function AppShell({
   menu: ItemNav[];
   akar: string;
   nama: string;
+  userId: string;
+  fotoVersi: string | null;
+  /** Halaman "Akun Saya" (foto profil, data akun, ganti password). */
+  akunHref: string;
   peran: string;
   nadaPeran: BadgeTone;
   aksiSidebar: React.ReactNode;
@@ -39,15 +47,16 @@ export function AppShell({
         <NavSidebar items={menu} akar={akar} />
 
         <div className="mt-auto space-y-1 border-t border-white/10 pt-4">
-          <div className="flex items-center gap-3 px-3 pb-2">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sidebar-active text-sm font-semibold text-white">
-              {nama.charAt(0).toUpperCase()}
-            </span>
+          <Link
+            href={akunHref}
+            className="flex items-center gap-3 rounded-control px-3 py-2 transition-colors duration-150 hover:bg-sidebar-active/60"
+          >
+            <Avatar nama={nama} userId={userId} fotoVersi={fotoVersi} ukuran="sm" className="bg-sidebar-active text-white ring-white/10" />
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-white">{nama}</p>
-              <p className="text-xs text-sidebar-text">{peran}</p>
+              <p className="text-xs text-sidebar-text">{peran} · Akun Saya</p>
             </div>
-          </div>
+          </Link>
           {aksiSidebar}
         </div>
       </aside>
@@ -64,6 +73,13 @@ export function AppShell({
             <Badge tone={nadaPeran} className="hidden sm:inline-flex">
               {peran}
             </Badge>
+            <Link
+              href={akunHref}
+              className="flex h-12 shrink-0 items-center gap-2 rounded-control px-1.5 text-sm font-medium text-ink hover:bg-surface-muted lg:hidden"
+            >
+              <Avatar nama={nama} userId={userId} fotoVersi={fotoVersi} ukuran="sm" />
+              <span>Akun</span>
+            </Link>
             <div className="flex items-center gap-1">{aksiHeader}</div>
           </div>
         </header>

@@ -51,14 +51,14 @@ export default async function AdminLayout({
       menu={menu}
       akar="/admin"
       nama={sesi.nama}
+      userId={sesi.userId}
+      fotoVersi={sesi.fotoVersi}
+      akunHref="/admin/akun"
       peran={isSuperAdmin ? "Super Admin" : "Admin"}
       nadaPeran={isSuperAdmin ? "warning" : "brand"}
       aksiSidebar={<GantiPasswordModal varian="sidebar" />}
       aksiHeader={
         <>
-          <div className="lg:hidden">
-            <GantiPasswordModal varian="ikon" />
-          </div>
           <form
             action={async () => {
               "use server";

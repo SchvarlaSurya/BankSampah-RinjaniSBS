@@ -8,6 +8,7 @@ import ResetPasswordDialog from "@/components/ResetPasswordDialog";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
 import { HapusAkunDialog } from "./hapus-akun-dialog";
+import { FotoProfilEditor } from "@/components/akun/foto-profil-editor";
 
 /**
  * Panel "Kelola akun" (super_admin) di bawah baris pengguna. Urutan tetap: Reset password,
@@ -47,6 +48,13 @@ export function KelolaAkunPanel({
   return (
     <div className="space-y-3 rounded-control bg-surface-muted p-4 ring-1 ring-line ring-inset">
       <p className="text-base font-semibold text-ink">Kelola akun</p>
+
+      <details className="rounded-control bg-surface p-3 ring-1 ring-line ring-inset">
+        <summary className="flex min-h-12 cursor-pointer items-center text-base font-medium text-ink">Foto profil</summary>
+        <div className="pt-3">
+          <FotoProfilEditor userId={pengguna.id} nama={pengguna.nama} fotoVersi={pengguna.fotoVersi} targetUserId={pengguna.id} ringkas />
+        </div>
+      </details>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         {pengguna.role !== "super_admin" && (

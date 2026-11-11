@@ -17,6 +17,8 @@ import type {
   GetLatestIdByRtInput,
   HapusPenggunaInput,
   HapusPenggunaResult,
+  HapusFotoProfilInput,
+  FotoProfilResult,
   LatestIdByRtResult,
   JenisSampah,
   KoreksiInput,
@@ -54,6 +56,9 @@ import {
   ResetPasswordInputSchema,
   SetStatusPenggunaInputSchema,
   HapusPenggunaInputSchema,
+  HapusFotoProfilInputSchema,
+  parseFotoProfilFormData,
+  AVATAR,
   SimpanJenisSampahInputSchema,
   SetorInputSchema,
   TarikInputSchema,
@@ -136,6 +141,7 @@ export async function login(input: LoginInput): Promise<ActionResult<SesiInfo>> 
     nama: user.nama,
     role,
     mustChangePassword: mustChange,
+    fotoVersi: store.fotoProfil.get(user.id as UserId) ?? null,
   };
   store.sesi = sesi;
   return ok(sesi);
@@ -313,8 +319,38 @@ export async function hapusPengguna(input: HapusPenggunaInput): Promise<ActionRe
   store.usersByUsername.delete(target.username);
   store.passwords.delete(userId);
   store.mustChangePassword.delete(userId);
+  store.fotoProfil.delete(userId);
   store.auditAkun.push({ pelakuId: g.sesi.userId, targetUserId: userId, targetUsername: target.username, alasan, waktu: nowIso() });
   return ok({ id: userId, username: target.username });
+}
+
+export async function unggahFotoProfil(formData: FormData): Promise<ActionResult<FotoProfilResult>> {
+  await delay();
+  const g = guard("unggahFotoProfil");
+  if (!g.ok) return g.hasil;
+  const { foto, userId } = parseFotoProfilFormData(formData);
+  const target = userId ?? g.sesi.userId;
+  if (target !== g.sesi.userId && g.sesi.role !== "super_admin") return fail("TIDAK_DIIZINKAN");
+  if (!store.usersById.has(target)) return fail("PENGGUNA_TIDAK_DITEMUKAN");
+  if (!foto) return fail("FOTO_WAJIB");
+  if (foto.size > AVATAR.MAKS_BYTES) return fail("FOTO_TERLALU_BESAR");
+  if (!fotoValid(new Uint8Array(await foto.arrayBuffer()), foto.type)) return fail("FOTO_TIDAK_VALID");
+  const versi = nowIso();
+  store.fotoProfil.set(target, versi);
+  return ok({ userId: target, fotoVersi: versi });
+}
+
+export async function hapusFotoProfil(input?: HapusFotoProfilInput): Promise<ActionResult<FotoProfilResult>> {
+  await delay();
+  const g = guard("hapusFotoProfil");
+  if (!g.ok) return g.hasil;
+  const parsed = HapusFotoProfilInputSchema.safeParse(input ?? {});
+  if (!parsed.success) return failDariZod(parsed.error);
+  const target = parsed.data.userId ?? g.sesi.userId;
+  if (target !== g.sesi.userId && g.sesi.role !== "super_admin") return fail("TIDAK_DIIZINKAN");
+  if (!store.usersById.has(target)) return fail("PENGGUNA_TIDAK_DITEMUKAN");
+  store.fotoProfil.delete(target);
+  return ok({ userId: target, fotoVersi: null });
 }
 
 export async function simpanJenisSampah(input: SimpanJenisSampahInput): Promise<ActionResult<JenisSampah>> {

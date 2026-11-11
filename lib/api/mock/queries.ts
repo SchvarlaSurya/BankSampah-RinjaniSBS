@@ -76,7 +76,7 @@ export const mockQueries: Queries = {
   async getSesi() {
     await delay();
     const g = guard("getSesi");
-    return g.ok ? g.sesi : null;
+    return g.ok ? { ...g.sesi, fotoVersi: store.fotoProfil.get(g.sesi.userId) ?? null } : null;
   },
 
   async getProfilSaya() {
@@ -190,6 +190,7 @@ export const mockQueries: Queries = {
           createdAt: store.dibuatPada.get(u.id) ?? "2024-08-01T00:00:00.000Z",
           bisaDihapus: alasan === null,
           alasanTidakBisaDihapus: alasan,
+          fotoVersi: store.fotoProfil.get(u.id) ?? null,
         };
       });
     return ok({ items: semua.slice(offset, offset + limit), total: semua.length, limit, offset });
@@ -266,6 +267,7 @@ export const mockQueries: Queries = {
           role: s.role === "super_admin" ? ("super_admin" as const) : ("admin" as const),
           online: s.id === g.sesi.userId,
           lastSeenAt: s.id === g.sesi.userId ? sekarang.toISOString() : null,
+          fotoVersi: store.fotoProfil.get(s.id) ?? null,
           streak: superAdmin || s.id === g.sesi.userId ? computeStreak([hariIni], hariIni) : null,
         })),
     });

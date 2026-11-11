@@ -79,6 +79,33 @@ export const PRESENCE = {
 
 export const ZONA_WAKTU = "Asia/Jakarta";
 
+/** Batas ukuran foto profil (KB). Ubah di sini saja; klien & server membaca konstanta ini. */
+export const AVATAR_MAX_KB = 500;
+
+/** Foto profil (semua role). Klien mengecilkan ke TARGET_DIMENSI sebelum unggah. */
+export const AVATAR = {
+  MAKS_KB: AVATAR_MAX_KB,
+  MAKS_BYTES: AVATAR_MAX_KB * 1024,
+  /** Dimensi maksimal yang diterima server (px, lebar & tinggi). */
+  MAKS_DIMENSI: 1024,
+  /** Ukuran hasil kompres klien dan hasil re-encode server (persegi, px). */
+  TARGET_DIMENSI: 512,
+  MAKS_UNGGAH_PER_JAM: 5,
+} as const;
+
+/** "Foto terlalu besar (812 KB). Maksimal 500 KB." */
+export function pesanFotoTerlaluBesar(bytes: number): string {
+  return `Foto terlalu besar (${Math.ceil(bytes / 1024)} KB). Maksimal ${AVATAR.MAKS_KB} KB.`;
+}
+
+/**
+ * URL foto profil (route yang mengecek sesi, bukan URL publik). `versi` = waktu foto terakhir
+ * diubah, supaya cache browser berganti saat foto diganti. null = tanpa foto (tampilkan inisial).
+ */
+export function urlFotoProfil(userId: string, versi: string | null): string | null {
+  return versi ? `/api/foto-profil/${encodeURIComponent(userId)}?v=${encodeURIComponent(versi)}` : null;
+}
+
 /** Rute tetap. Frontend membuat halaman persis di path ini. */
 export const ROUTES = {
   login: "/login",
@@ -119,6 +146,7 @@ export const ERROR_CODES = [
   "FOTO_WAJIB",
   "FOTO_TIDAK_VALID",
   "FOTO_SUDAH_DIPAKAI",
+  "FOTO_TERLALU_BESAR",
   "ITEM_TERLALU_KECIL",
   // tarik
   "SALDO_TIDAK_CUKUP",
@@ -176,6 +204,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   FOTO_WAJIB: "Foto timbangan wajib dilampirkan.",
   FOTO_TIDAK_VALID: "Foto tidak valid. Gunakan JPG, PNG, atau WebP dengan ukuran wajar.",
   FOTO_SUDAH_DIPAKAI: "Foto ini sudah pernah dipakai pada transaksi lain. Ambil foto timbangan yang baru.",
+  FOTO_TERLALU_BESAR: `Foto terlalu besar. Maksimal ${AVATAR_MAX_KB} KB.`,
   ITEM_TERLALU_KECIL: "Berat terlalu kecil sehingga nilainya Rp0. Periksa berat dan jenis sampah.",
   SALDO_TIDAK_CUKUP: "Saldo nasabah tidak cukup.",
   TRANSAKSI_TIDAK_DITEMUKAN: "Transaksi tidak ditemukan.",
@@ -537,6 +566,29 @@ export function parseSetorFormData(fd: FormData): { payload: unknown; foto: File
   return { payload, foto: foto instanceof File && foto.size > 0 ? foto : null };
 }
 
+/**
+ * unggahFotoProfil() menerima FormData: "foto" (File, sudah dikecilkan klien) dan opsional
+ * "userId" (target; hanya super_admin untuk akun orang lain). Kosong = akun sendiri.
+ */
+export function buildFotoProfilFormData(foto: Blob, userId?: string): FormData {
+  const fd = new FormData();
+  fd.append("foto", foto, foto instanceof File ? foto.name : "foto");
+  if (userId) fd.append("userId", userId);
+  return fd;
+}
+
+export function parseFotoProfilFormData(fd: FormData): { foto: File | null; userId: string | undefined } {
+  const foto = fd.get("foto");
+  const userId = fd.get("userId");
+  return {
+    foto: foto instanceof File && foto.size > 0 ? foto : null,
+    userId: typeof userId === "string" && userId.length > 0 && userId.length <= 64 ? userId : undefined,
+  };
+}
+
+export const HapusFotoProfilInputSchema = z.object({ userId: userId.optional() });
+export type HapusFotoProfilInput = z.input<typeof HapusFotoProfilInputSchema>;
+
 /* ========================================================================== */
 /* 8. DTO (bentuk data yang dikembalikan server)                               */
 /* ========================================================================== */
@@ -546,6 +598,8 @@ export interface SesiInfo {
   nama: string;
   role: Role;
   mustChangePassword: boolean;
+  /** Versi foto profil sendiri (lihat urlFotoProfil); null = tanpa foto. */
+  fotoVersi: string | null;
 }
 
 export interface PenggunaRingkas {
@@ -569,6 +623,8 @@ export interface PenggunaDetail extends PenggunaRingkas {
    */
   bisaDihapus: boolean;
   alasanTidakBisaDihapus: ErrorCode | null;
+  /** Versi foto profil (lihat urlFotoProfil); null = tanpa foto. */
+  fotoVersi: string | null;
 }
 
 export interface HalamanPengguna {
@@ -683,6 +739,12 @@ export interface ResetPasswordResult {
   passwordSementara: string;
 }
 
+export interface FotoProfilResult {
+  userId: UserId;
+  /** null = foto sudah dihapus (kembali ke inisial). */
+  fotoVersi: string | null;
+}
+
 export interface HapusPenggunaResult {
   id: UserId;
   /** ID ini kosong lagi dan boleh dipakai ulang untuk akun baru. */
@@ -712,6 +774,7 @@ export interface AnggotaTimAdmin {
   /** last_seen_at dalam PRESENCE.ONLINE_DETIK terakhir dan belum logout / tutup tab. */
   online: boolean;
   lastSeenAt: IsoUtc | null;
+  fotoVersi: string | null;
   /**
    * Streak anggota ini. Diisi server HANYA untuk super_admin (semua anggota) atau untuk diri
    * sendiri (admin). Untuk admin lain selalu null: bukan disembunyikan UI, memang tidak dikirim.
@@ -789,6 +852,14 @@ export interface Actions {
    * terakhir. Satu transaksi DB, syarat dicek ulang di dalamnya, dicatat di audit_akun.
    */
   hapusPengguna(input: HapusPenggunaInput): Promise<ActionResult<HapusPenggunaResult>>;
+  /**
+   * Semua role: foto profil sendiri. super_admin: juga akun orang lain (moderasi, FormData
+   * "userId"). JPG/PNG/WebP, maks AVATAR.MAKS_KB, maks AVATAR.MAKS_DIMENSI px, dicek dari isi file;
+   * server re-encode (EXIF/GPS dibuang). Maks AVATAR.MAKS_UNGGAH_PER_JAM per akun pengunggah.
+   */
+  unggahFotoProfil(formData: FormData): Promise<ActionResult<FotoProfilResult>>;
+  /** Semua role: hapus foto sendiri (kembali ke inisial). super_admin: foto siapa pun. */
+  hapusFotoProfil(input?: HapusFotoProfilInput): Promise<ActionResult<FotoProfilResult>>;
   /** admin, super_admin. Buat (tanpa id) atau ubah (dengan id). Perubahan harga hanya berlaku untuk transaksi berikutnya; perubahan harga beli dicatat di riwayat harga. */
   simpanJenisSampah(input: SimpanJenisSampahInput): Promise<ActionResult<JenisSampah>>;
   /** Sama dengan simpanJenisSampah (nama yang dipakai halaman katalog). */
@@ -829,6 +900,8 @@ export const AKSES: Record<keyof Queries | keyof Actions, readonly Role[]> = {
   resetPasswordPengguna: ["super_admin"],
   setStatusPengguna: ["super_admin"],
   hapusPengguna: ["super_admin"],
+  unggahFotoProfil: ROLES,
+  hapusFotoProfil: ROLES,
   simpanJenisSampah: ["admin", "super_admin"],
   updateHargaSampah: ["admin", "super_admin"],
   setor: ["admin", "super_admin"],

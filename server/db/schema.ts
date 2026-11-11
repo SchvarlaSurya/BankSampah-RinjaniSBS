@@ -293,3 +293,29 @@ export const auditAkun = pgTable(
     index("audit_akun_waktu_idx").on(t.waktu.desc().nullsFirst()),
   ],
 );
+
+// ─── Foto profil (semua role) ───────────────────────────────────────────────
+// Path objek di storage privat (bucket FOTO_PROFIL_BUCKET / folder lokal), bukan URL. Satu foto per
+// akun; baris ikut terhapus bersama akun (file storage dihapus oleh server).
+export const fotoProfil = pgTable("foto_profil", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  path: text("path").notNull(),
+  diperbaruiAt: timestamp("diperbarui_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Log unggahan untuk pembatas (maks. AVATAR.MAKS_UNGGAH_PER_JAM per akun pengunggah). */
+export const fotoProfilUnggah = pgTable(
+  "foto_profil_unggah",
+  {
+    id: bigint("id", { mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    waktu: timestamp("waktu", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("foto_profil_unggah_user_id_waktu_idx").on(t.userId, t.waktu.desc().nullsFirst())],
+);
