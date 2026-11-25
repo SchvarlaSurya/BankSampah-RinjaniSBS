@@ -4,9 +4,20 @@ import { type ErrorCode, kodeDariPesanDb } from "@/contract";
 interface PgErrorLike {
   message: string;
   code?: string;
+  severity?: string;
   detail?: string;
+  hint?: string;
+  position?: string;
+  where?: string;
+  schema_name?: string;
+  table_name?: string;
+  column_name?: string;
+  data_type_name?: string;
   constraint_name?: string;
+  file?: string;
+  line?: string;
   routine?: string;
+  stack?: string;
 }
 
 /** Error Postgres dari postgres.js langsung atau dari `cause` (Drizzle membungkusnya). */
@@ -29,11 +40,22 @@ export function logServer(konteks: string, e: unknown): void {
   const pg = pgErrorDari(e);
   if (pg) {
     console.error(`[${konteks}] db error`, {
+      severity: pg.severity,
       sqlstate: pg.code,
       message: pg.message,
       detail: pg.detail,
+      hint: pg.hint,
+      position: pg.position,
+      where: pg.where,
+      schema: pg.schema_name,
+      table: pg.table_name,
+      column: pg.column_name,
+      dataType: pg.data_type_name,
       constraint: pg.constraint_name,
+      file: pg.file,
+      line: pg.line,
       routine: pg.routine,
+      stack: pg.stack,
     });
     return;
   }

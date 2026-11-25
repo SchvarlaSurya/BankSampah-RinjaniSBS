@@ -10,6 +10,8 @@ process.env.DATABASE_URL = urlTesDb().appUrl;
 process.env.BETTER_AUTH_SECRET = "tes-lokal-bukan-rahasia-0123456789abcdef";
 process.env.BETTER_AUTH_URL = "http://localhost:3000";
 process.env.TRUSTED_ORIGINS = "";
+// Rahasia cron keepalive (GET /api/cron/keepalive) khusus tes.
+process.env.CRON_SECRET = "cron-tes-lokal-bukan-rahasia";
 // Foto ke direktori sementara unik per file tes (bukan .data/ di repo).
 process.env.FOTO_STORAGE = "local";
 process.env.FOTO_LOCAL_DIR = path.join(tmpdir(), "bank-sampah-foto-tes", randomUUID());

@@ -43,7 +43,14 @@ describe("login", () => {
     const hasil = await coba(b, a.username.toUpperCase(), a.password);
     expect(hasil).toEqual({
       ok: true,
-      data: { userId: a.userId, username: a.username, nama: "Tes admin", role: "admin", mustChangePassword: false },
+      data: {
+        userId: a.userId,
+        username: a.username,
+        nama: "Tes admin",
+        role: "admin",
+        mustChangePassword: false,
+        fotoVersi: null,
+      },
     });
     const cookie = b.jar.get("better-auth.session_token");
     expect(cookie).toBeDefined();

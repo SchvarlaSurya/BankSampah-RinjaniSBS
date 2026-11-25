@@ -8,6 +8,7 @@ import { Lock, User, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, inputClass } from "@/components/ui/field";
 import { Alert } from "@/components/ui/feedback";
+import { LogoSbs } from "@/components/shell/logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -64,8 +65,15 @@ export default function LoginPage() {
       {/* Blok merek (publik, ekspresif): hijau tua, judul condensed senada wordmark logo. */}
       <section className="relative overflow-hidden bg-brand-deep text-white lg:flex lg:w-[46%] lg:flex-col lg:justify-between">
         <div className="relative z-10 px-6 pt-7 pb-16 sm:px-10 sm:pt-10 sm:pb-20 lg:px-14 lg:pt-14">
-          <p className="text-sm font-medium tracking-[0.2em] text-white/80 uppercase">Bank Sampah</p>
-          <p className="font-display text-2xl leading-none font-bold tracking-wide uppercase sm:text-3xl">SBS Rinjani</p>
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex shrink-0 items-center justify-center rounded-2xl bg-white p-2 shadow-sm sm:p-2.5">
+              <LogoSbs className="w-14 sm:w-16 lg:w-20" priority />
+            </div>
+            <div>
+              <p className="text-xs font-semibold tracking-[0.2em] text-white/80 uppercase">Bank Sampah</p>
+              <p className="font-display text-xl leading-none font-bold tracking-wide uppercase sm:text-2xl lg:text-3xl">SBS Rinjani</p>
+            </div>
+          </div>
 
           <h1 className="mt-6 max-w-md font-display text-4xl leading-[0.95] font-extrabold tracking-tight uppercase sm:mt-10 sm:text-6xl lg:mt-24 lg:text-7xl">
             Sampah terpilah, saldo tercatat.

@@ -1,4 +1,5 @@
 {
   "regions": ["sin1"],
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [{ "path": "/api/cron/keepalive", "schedule": "0 23 * * *" }]
 }

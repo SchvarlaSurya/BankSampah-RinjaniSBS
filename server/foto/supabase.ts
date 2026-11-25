@@ -5,7 +5,7 @@ import type { FotoStorage } from "./storage";
  * Supabase Storage lewat REST (tanpa supabase-js), memakai service_role key DI SERVER SAJA.
  * Endpoint mengikuti storage-js resmi: upload POST /object/{bucket}/{path} (x-upsert: false),
  * signed URL POST /object/sign/{bucket}/{path} {expiresIn} -> {signedURL},
- * hapus DELETE /object/{bucket} {prefixes}.
+ * hapus DELETE /object/{bucket} {prefixes}, unduh GET /object/authenticated/{bucket}/{path}.
  *
  * BELUM TERUJI terhadap Supabase asli. Bucket harus PRIVATE.
  */
@@ -45,6 +45,11 @@ export function fotoStorageSupabase(opsi: { url: string; kunci: string; bucket: 
       await pastikan(res, "sign");
       const { signedURL } = (await res.json()) as { signedURL: string };
       return { url: `${dasar}${signedURL}`, berlakuHingga: new Date(Date.now() + detik * 1000) };
+    },
+    async baca(p) {
+      const res = await fetch(`${dasar}/object/authenticated/${objek(p)}`, { headers: header });
+      await pastikan(res, "unduh");
+      return new Uint8Array(await res.arrayBuffer());
     },
   };
 }

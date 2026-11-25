@@ -40,14 +40,14 @@ export default async function NasabahLayout({
       menu={menu}
       akar="/nasabah"
       nama={sesi.nama}
+      userId={sesi.userId}
+      fotoVersi={sesi.fotoVersi}
+      akunHref="/nasabah/akun"
       peran="Nasabah"
       nadaPeran="info"
       aksiSidebar={<GantiPasswordModal varian="sidebar" />}
       aksiHeader={
         <>
-          <div className="lg:hidden">
-            <GantiPasswordModal varian="ikon" />
-          </div>
           <form
           action={async () => {
             "use server";

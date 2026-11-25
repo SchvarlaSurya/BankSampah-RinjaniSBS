@@ -7,15 +7,21 @@ sudah ada di `server/api/` dan diperiksa compiler lewat `server/api/conformance.
 
 | File | Isi |
 |---|---|
-| `server/api/actions.ts` | Server Actions (`"use server"`): login, logout, gantiPassword, buatPengguna, getLatestIdByRt, resetPasswordPengguna, setStatusPengguna, simpanJenisSampah, updateHargaSampah, setor, tarik, koreksi, sesuaikanSaldo |
+| `server/api/actions.ts` | Server Actions (`"use server"`): login, logout, gantiPassword, buatPengguna, getLatestIdByRt, resetPasswordPengguna, setStatusPengguna, hapusPengguna, unggahFotoProfil, hapusFotoProfil, simpanJenisSampah, updateHargaSampah, setor, tarik, koreksi, sesuaikanSaldo |
 | `server/api/real-actions.ts` | Objek `realActions: Actions` untuk saklar frontend (tanpa `server-only`, boleh diimpor Client Component) |
-| `server/api/queries.ts` | Query (`server-only`): getSesi, getProfilSaya, cariNasabah, getNasabah, listJenisSampah, listRiwayatHarga, listStaf, listPengguna, getHistori, getTransaksi, auditTransaksi + objek `realQueries: Queries` |
+| `server/api/queries.ts` | Query (`server-only`): getSesi, getProfilSaya, cariNasabah, getNasabah, listJenisSampah, listRiwayatHarga, listStaf, listPengguna, getHistori, getTransaksi, auditTransaksi, getAktivitasAdmin + objek `realQueries: Queries` |
+| `server/aktivitas-admin.ts` | Login harian (UPSERT `admin_login_day`), heartbeat/offline (`admin_presence`), data dashboard streak + Tim Admin, keepalive |
+| `server/aktivitas-admin-route.ts` | Logika route `/api/admin/presence` (GET/POST) dan `/api/cron/keepalive` |
+| `server/foto/profil.ts`, `server/foto/profil-route.ts` | Foto profil: validasi + re-encode (sharp), unggah/hapus, pembatas, route penyaji `/api/foto-profil/[userId]` |
+| `server/hapus-akun.ts` | Aturan & proses hapus akun (satu transaksi DB, cek ulang, log `audit_akun`) |
+| `lib/streak.ts` | `computeStreak(tanggal[], hariIniWIB)` fungsi murni + `tanggalWib` |
 | `server/api/conformance.ts` | Pemeriksaan tipe `Queries`/`Actions` (tsc saja) |
 | `server/guards.ts` | `requireAkses(nama)`: urutan kontrak Bagian 8.1 |
 | `server/auth.ts` | Konfigurasi Better Auth 1.7.6 |
 | `server/foto/*` | Validasi foto, FotoStorage (local / supabase), route dev |
 | `server/konfigurasi.ts` | Validasi env (zod) |
-| `app/api/dev-foto/[name]/route.ts` | Route DEV foto lokal (satu-satunya file backend di `app/`) |
+| `app/api/dev-foto/[name]/route.ts` | Route DEV foto lokal |
+| `app/api/admin/presence/route.ts`, `app/api/cron/keepalive/route.ts` | Route presence admin & cron keepalive (memuat modul server secara dinamis) |
 | `drizzle/` | Migration (lihat urutan di bawah) |
 
 Setiap fungsi: `requireAkses` (sesi → wajib ganti password → AKSES, role dibaca dari DB tiap
@@ -64,7 +70,9 @@ Contoh lengkap di `.env.example`. Di produksi (Vercel) isi lewat Environment Var
 | `FOTO_LOCAL_DIR` | tidak | Folder foto untuk `local` (default `.data/foto`, sudah di .gitignore) | `.data/foto` |
 | `SUPABASE_URL` | bila supabase | URL proyek Supabase (Storage) | `https://<ref>.supabase.co` |
 | `SUPABASE_SERVICE_ROLE_KEY` | bila supabase | Kunci service role, HANYA di server, jangan `NEXT_PUBLIC_` | `<service-role-key>` |
+| `FOTO_PROFIL_BUCKET` | tidak | Bucket PRIVATE foto profil (default `foto-profil`); mode `local` memakai `<FOTO_LOCAL_DIR>/profil` | `foto-profil` |
 | `FOTO_BUCKET` | tidak | Nama bucket PRIVATE (default `foto-timbangan`) | `foto-timbangan` |
+| `CRON_SECRET` | tidak | Rahasia `GET /api/cron/keepalive` (header `Authorization: Bearer ...`; Vercel Cron mengirimnya otomatis). Kosong = endpoint 503 | `<acak-minimal-16-karakter>` |
 | `SEED_SUPERADMIN_USERNAME` / `SEED_SUPERADMIN_NAMA` | seed | Untuk `npm run seed:superadmin` | `kepala` / `Kepala Bank Sampah` |
 | `RESET_SUPERADMIN_USERNAME` | reset | Untuk `npm run reset:superadmin` | `kepala` |
 
@@ -90,10 +98,17 @@ Secret GitHub Actions (hanya workflow backup): `SUPABASE_DB_URL` (owner, 5432) d
    11. `20261014013750_price_history_akses` — GRANT SELECT/INSERT + RLS `price_history` untuk app_server
    12. `20261014023416_penyesuaian_skema` — tipe transaksi `penyesuaian` + CHECK (alasan wajib, tanpa foto/reverses_id)
    13. `20261014023437_penyesuaian_fungsi` — fungsi SQL `penyesuaian` (EXECUTE hanya app_server)
+   14. `20261111020325_aktivitas_admin` — tabel `admin_login_day`, `admin_presence`, `system_keepalive`
+   15. `20261111020357_aktivitas_admin_akses` — GRANT + RLS tabel aktivitas admin
+   16. `20261111022100_audit_akun` — tabel log `audit_akun` (hapus akun)
+   17. `20261111022107_audit_akun_akses` — GRANT SELECT/INSERT (append-only) + RLS `audit_akun`
+   18. `20261111023951_foto_profil` — tabel `foto_profil` (path storage per akun) & `foto_profil_unggah` (pembatas)
+   19. `20261111023959_foto_profil_akses` — GRANT + RLS tabel foto profil
    Migration pertama ke Supabase membekukan riwayat: setelah itu perubahan hanya lewat migration BARU.
 2. Set password `app_server` (tidak ada di migration): konek sebagai `postgres` dengan psql lalu
    `\password app_server`, isi `DATABASE_URL` dengan username `app_server.<project-ref>`.
-3. Buat bucket Storage PRIVATE `foto-timbangan` (atau sesuai `FOTO_BUCKET`).
+3. Buat bucket Storage PRIVATE `foto-timbangan` (atau sesuai `FOTO_BUCKET`) dan `foto-profil`
+   (atau sesuai `FOTO_PROFIL_BUCKET`).
 4. `npm run seed:superadmin` (lihat bawah).
 
 ## Seed & reset password super_admin
@@ -178,6 +193,39 @@ dan tes.
   `getLatestIdByRt` hanya saran ID berikutnya, `buatPengguna` tetap menolak duplikat.
 - `auditTransaksi`: `dari`/`sampai` = tanggal kalender Asia/Jakarta, inklusif.
 - Handler HTTP Better Auth (`/api/auth/*`) TIDAK di-mount; semua auth lewat Server Action.
+- **Streak login harian** (admin & super_admin; nasabah tidak pernah dicatat): satu baris
+  `admin_login_day` per (akun, tanggal WIB) lewat UPSERT. Dicatat oleh hook sesi Better Auth saat
+  login berhasil DAN oleh heartbeat pertama hari itu (sesi bisa bertahan berhari-hari). Aturan
+  streak di `lib/streak.ts`: hari terlewat = mulai lagi dari 1; hari ini belum masuk tapi kemarin
+  masuk = belum putus. Admin biasa hanya menerima streak miliknya; streak orang lain `null` di
+  payload (ditegakkan di `muatAktivitasAdmin`). Super_admin menerima streak semua staf.
+- **Presence**: `POST /api/admin/presence` tiap 30 detik saat tab terlihat (`{status:"offline"}`
+  lewat sendBeacon saat tab ditutup; logout juga menandai offline). Online = heartbeat ≤ 90 detik
+  lalu dan belum offline. `GET` = data dashboard + `serverNow`, dipolling tiap 10 detik. 401/403
+  menghentikan klien. POST dengan header Origin asing ditolak 403.
+- **Hapus akun** (`hapusPengguna`, super_admin saja): untuk koreksi akun yang salah dibuat.
+  Ditolak bila akun punya riwayat apa pun (`AKUN_PUNYA_RIWAYAT`: transaksi sebagai nasabah atau
+  petugas, riwayat harga, atau pernah menjadi pelaku di `audit_akun`), akun sendiri
+  (`TIDAK_BISA_HAPUS_DIRI`), atau super_admin aktif terakhir (`SUPER_ADMIN_TERAKHIR`). Wajib
+  `konfirmasi` = ID atau nama persis dan `alasan`. Satu transaksi DB: baris target `FOR UPDATE`,
+  syarat dicek ulang, FK ke `user` jadi pengaman terakhir (23503 → `AKUN_PUNYA_RIWAYAT`). Yang
+  dihapus: user, account, session, admin_login_day, admin_presence, kunci login per-username.
+  `audit_akun` (append-only) menyimpan pelaku, waktu, ID, nama, peran, alasan; tetap ada setelah
+  akun terhapus. ID yang dihapus kosong lagi dan boleh dipakai ulang. `listPengguna` mengirim
+  `bisaDihapus` + `alasanTidakBisaDihapus` untuk super_admin (tombol nonaktif + penjelasan).
+- **Foto profil** (semua role): `unggahFotoProfil(FormData)` / `hapusFotoProfil`. Pengguna hanya
+  mengubah fotonya sendiri; super_admin boleh mengubah/menghapus foto siapa pun (moderasi, panel
+  Kelola akun). Server memvalidasi ukuran byte sebenarnya (maks `AVATAR_MAX_KB` = 500 KB,
+  `FOTO_TERLALU_BESAR`), isi file (magic bytes JPG/PNG/WebP, tipe klaim harus cocok, harus bisa
+  di-decode sharp) dan dimensi maks 1024×1024, lalu re-encode ke WebP 512×512 (EXIF/GPS dibuang).
+  Maks 5 unggahan per jam per akun pengunggah (`TERLALU_BANYAK_PERCOBAAN` + `retryAfterDetik`).
+  Klien mengecilkan foto HP ke 512 px sebelum unggah. Disimpan di bucket privat, path di
+  `foto_profil`; ditampilkan lewat `GET /api/foto-profil/[userId]?v=<versi>` yang mengecek sesi:
+  pemilik atau admin/super_admin (nasabah tidak bisa melihat foto orang lain → 404). Foto lama
+  dihapus saat diganti, dan ikut dihapus saat akun dihapus.
+- **Keepalive**: `GET /api/cron/keepalive` (Bearer `CRON_SECRET`) meng-UPSERT `system_keepalive`
+  supaya database Supabase gratis selalu punya perubahan harian walau tidak ada admin login.
+  Dijadwalkan `vercel.json` 23:00 UTC (06:00 WIB). Set `CRON_SECRET` di Vercel.
 
 ## BELUM TERUJI
 

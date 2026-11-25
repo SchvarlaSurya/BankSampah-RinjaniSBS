@@ -13,6 +13,7 @@ import {
 import { auth } from "./auth";
 import { db } from "./db";
 import { user } from "./db/auth-schema";
+import { fotoProfil } from "./db/schema";
 import { hapusSemuaSesi } from "./pengguna";
 
 export type NamaAkses = keyof Queries | keyof Actions;
@@ -25,6 +26,8 @@ export interface SesiServer {
   mustChangePassword: boolean;
   /** Token sesi request ini (untuk mencabut sesi LAIN saat ganti password). */
   sessionToken: string;
+  /** Versi foto profil sendiri (ISO diperbarui_at), null = tanpa foto. */
+  fotoVersi: string | null;
 }
 
 export type HasilGuard =
@@ -45,8 +48,10 @@ export async function sesiDariCookie(): Promise<SesiServer | null> {
       role: user.role,
       aktif: user.aktif,
       mustChangePassword: user.mustChangePassword,
+      fotoDiperbarui: fotoProfil.diperbaruiAt,
     })
     .from(user)
+    .leftJoin(fotoProfil, eq(fotoProfil.userId, user.id))
     .where(eq(user.id, s.user.id));
   if (!u || !u.aktif) {
     await hapusSemuaSesi(s.user.id);
@@ -59,6 +64,7 @@ export async function sesiDariCookie(): Promise<SesiServer | null> {
     role: u.role,
     mustChangePassword: u.mustChangePassword,
     sessionToken: s.session.token,
+    fotoVersi: u.fotoDiperbarui ? u.fotoDiperbarui.toISOString() : null,
   };
 }
 

@@ -5,6 +5,7 @@ import { nextCookies } from "better-auth/next-js";
 import { username } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { LIMIT } from "@/contract";
+import { catatLoginBerhasil } from "./aktivitas-admin";
 import { db } from "./db";
 import { account, session, user, verification } from "./db/auth-schema";
 import { env } from "./konfigurasi";
@@ -82,6 +83,11 @@ export const auth = betterAuth({
             .from(user)
             .where(eq(user.id, s.userId));
           if (!u?.aktif) return false;
+        },
+        // Streak login harian admin & super_admin (nasabah diabaikan). Gagal mencatat tidak
+        // menggagalkan login.
+        after: async (s) => {
+          await catatLoginBerhasil(s.userId);
         },
       },
     },

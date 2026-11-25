@@ -27,7 +27,8 @@ import {
   type TransaksiRingkas,
 } from "@/contract";
 import { guard } from "./_guard";
-import { store } from "./_store";
+import { punyaRiwayat, store } from "./_store";
+import { computeStreak } from "@/lib/streak";
 
 /** Delay palsu agar terasa realistis (50ms). */
 const delay = () => new Promise<void>((r) => setTimeout(r, 50));
@@ -75,7 +76,7 @@ export const mockQueries: Queries = {
   async getSesi() {
     await delay();
     const g = guard("getSesi");
-    return g.ok ? g.sesi : null;
+    return g.ok ? { ...g.sesi, fotoVersi: store.fotoProfil.get(g.sesi.userId) ?? null } : null;
   },
 
   async getProfilSaya() {
@@ -170,12 +171,28 @@ export const mockQueries: Queries = {
       .filter((u) => !prefixRt || u.username.startsWith(prefixRt))
       .filter((u) => !q || u.username.toLowerCase().includes(q) || u.nama.toLowerCase().includes(q))
       .sort((a, b) => a.role.localeCompare(b.role) || a.username.localeCompare(b.username))
-      .map((u) => ({
-        ...u,
-        rt: u.role === "nasabah" && /^\d{2}/.test(u.username) ? u.username.slice(0, 2) : null,
-        mustChangePassword: store.mustChangePassword.get(u.id) ?? false,
-        createdAt: store.dibuatPada.get(u.id) ?? "2024-08-01T00:00:00.000Z",
-      }));
+      .map((u) => {
+        const superAdminLain = store.staf.filter((s) => s.role === "super_admin" && s.aktif && s.id !== u.id).length;
+        const alasan =
+          g.sesi.role !== "super_admin"
+            ? ("TIDAK_DIIZINKAN" as const)
+            : u.id === g.sesi.userId
+              ? ("TIDAK_BISA_HAPUS_DIRI" as const)
+              : u.role === "super_admin" && superAdminLain < 1
+                ? ("SUPER_ADMIN_TERAKHIR" as const)
+                : punyaRiwayat(u.id)
+                  ? ("AKUN_PUNYA_RIWAYAT" as const)
+                  : null;
+        return {
+          ...u,
+          rt: u.role === "nasabah" && /^\d{2}/.test(u.username) ? u.username.slice(0, 2) : null,
+          mustChangePassword: store.mustChangePassword.get(u.id) ?? false,
+          createdAt: store.dibuatPada.get(u.id) ?? "2024-08-01T00:00:00.000Z",
+          bisaDihapus: alasan === null,
+          alasanTidakBisaDihapus: alasan,
+          fotoVersi: store.fotoProfil.get(u.id) ?? null,
+        };
+      });
     return ok({ items: semua.slice(offset, offset + limit), total: semua.length, limit, offset });
   },
 
@@ -226,5 +243,33 @@ export const mockQueries: Queries = {
       .sort(idTurun)
       .map((t) => tampil(t, true));
     return ok(halaman(semua, cursor, limit));
+  },
+
+  async getAktivitasAdmin() {
+    await delay();
+    const g = guard("getAktivitasAdmin");
+    if (!g.ok) return g.hasil;
+    // Mock: tiap staf dianggap masuk hari ini saja; streak orang lain hanya untuk super_admin.
+    const sekarang = new Date();
+    const hariIni = tanggalWib(sekarang.toISOString());
+    const streakSaya = computeStreak([hariIni], hariIni);
+    const superAdmin = g.sesi.role === "super_admin";
+    return ok({
+      serverNow: sekarang.toISOString(),
+      hariIni,
+      saya: streakSaya,
+      tim: store.staf
+        .filter((s) => s.aktif)
+        .map((s) => ({
+          id: s.id,
+          nama: s.nama,
+          username: s.username,
+          role: s.role === "super_admin" ? ("super_admin" as const) : ("admin" as const),
+          online: s.id === g.sesi.userId,
+          lastSeenAt: s.id === g.sesi.userId ? sekarang.toISOString() : null,
+          fotoVersi: store.fotoProfil.get(s.id) ?? null,
+          streak: superAdmin || s.id === g.sesi.userId ? computeStreak([hariIni], hariIni) : null,
+        })),
+    });
   },
 };

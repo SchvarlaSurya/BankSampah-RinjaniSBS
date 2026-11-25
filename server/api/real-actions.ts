@@ -6,6 +6,8 @@ import {
   buatPengguna,
   gantiPassword,
   getLatestIdByRt,
+  hapusFotoProfil,
+  hapusPengguna,
   koreksi,
   login,
   logout,
@@ -15,6 +17,7 @@ import {
   setStatusPengguna,
   simpanJenisSampah,
   tarik,
+  unggahFotoProfil,
   updateHargaSampah,
 } from "./actions";
 
@@ -26,10 +29,13 @@ export const realActions: Actions = {
   getLatestIdByRt,
   resetPasswordPengguna,
   setStatusPengguna,
+  hapusPengguna,
   simpanJenisSampah,
   updateHargaSampah,
   setor,
   tarik,
   koreksi,
   sesuaikanSaldo,
+  unggahFotoProfil,
+  hapusFotoProfil,
 };

@@ -37,6 +37,11 @@ const schema = z.object({
   SUPABASE_URL: httpUrl.optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   FOTO_BUCKET: z.string().min(1).default("foto-timbangan"),
+  // Foto profil: bucket PRIVATE terpisah (supabase) / subfolder "profil" di FOTO_LOCAL_DIR (local).
+  FOTO_PROFIL_BUCKET: z.string().min(1).default("foto-profil"),
+  // Rahasia GET /api/cron/keepalive (header Authorization: Bearer <CRON_SECRET>). Vercel Cron
+  // mengirim header ini otomatis bila env CRON_SECRET di-set. Kosong = endpoint nonaktif (503).
+  CRON_SECRET: z.string().min(16, "minimal 16 karakter").optional(),
 }).superRefine((v, ctx) => {
   if (v.FOTO_STORAGE === "supabase" && (!v.SUPABASE_URL || !v.SUPABASE_SERVICE_ROLE_KEY)) {
     ctx.addIssue({ code: "custom", path: ["FOTO_STORAGE"], message: "supabase butuh SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY" });
@@ -46,7 +51,12 @@ const schema = z.object({
   }
 });
 
-const parsed = schema.safeParse(process.env);
+// DATABASE_URL kosong diperlakukan sama dengan belum di-set.
+const parsed = schema.safeParse({
+  ...process.env,
+  DATABASE_URL: process.env.DATABASE_URL || undefined,
+  CRON_SECRET: process.env.CRON_SECRET || undefined,
+});
 
 if (!parsed.success) {
   throw new Error(`Env tidak valid:\n${z.prettifyError(parsed.error)}`);

@@ -7,6 +7,7 @@ import { LogOut } from "lucide-react";
 import { buttonClass } from "@/components/ui/button";
 import { AppShell } from "@/components/shell/app-shell";
 import type { ItemNav } from "@/components/shell/nav";
+import { PresenceHeartbeat } from "@/components/aktivitas/presence-heartbeat";
 
 import { GantiPasswordModal } from "@/app/nasabah/GantiPasswordModal";
 
@@ -50,14 +51,14 @@ export default async function AdminLayout({
       menu={menu}
       akar="/admin"
       nama={sesi.nama}
+      userId={sesi.userId}
+      fotoVersi={sesi.fotoVersi}
+      akunHref="/admin/akun"
       peran={isSuperAdmin ? "Super Admin" : "Admin"}
       nadaPeran={isSuperAdmin ? "warning" : "brand"}
       aksiSidebar={<GantiPasswordModal varian="sidebar" />}
       aksiHeader={
         <>
-          <div className="lg:hidden">
-            <GantiPasswordModal varian="ikon" />
-          </div>
           <form
             action={async () => {
               "use server";
@@ -74,6 +75,7 @@ export default async function AdminLayout({
         </>
       }
     >
+      <PresenceHeartbeat />
       {children}
     </AppShell>
   );

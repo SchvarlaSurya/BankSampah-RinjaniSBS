@@ -15,6 +15,13 @@ import {
   failDariZod,
   GantiPasswordInputSchema,
   type GantiPasswordInput,
+  HapusPenggunaInputSchema,
+  HapusFotoProfilInputSchema,
+  type HapusFotoProfilInput,
+  type FotoProfilResult,
+  parseFotoProfilFormData,
+  type HapusPenggunaInput,
+  type HapusPenggunaResult,
   type JenisSampah,
   type KoreksiInput,
   KoreksiInputSchema,
@@ -42,13 +49,16 @@ import {
   type PenyesuaianInput,
   PenyesuaianInputSchema,
 } from "@/contract";
+import { tandaiOffline, termasukStaf } from "../aktivitas-admin";
 import { idKeNumber } from "../angka";
 import { auth } from "../auth";
 import { db } from "../db";
 import { user } from "../db/auth-schema";
-import { priceHistory, wasteTypes } from "../db/schema";
+import { fotoProfil, priceHistory, wasteTypes } from "../db/schema";
 import { constraintUnik, logServer, pgErrorDari, petaErrorDb } from "../errors";
 import { fotoStorage } from "../foto/storage";
+import { hapusAkun } from "../hapus-akun";
+import { hapusFileFotoProfil, hapusFotoProfilUntuk, unggahFotoProfilUntuk } from "../foto/profil";
 import { periksaFoto } from "../foto/validasi";
 import type { NamaAkses, SesiServer } from "../guards";
 import { ipKlien } from "../ip";
@@ -107,8 +117,10 @@ export async function login(input: LoginInput): Promise<ActionResult<SesiInfo>> 
         nama: user.name,
         role: user.role,
         mustChangePassword: user.mustChangePassword,
+        fotoDiperbarui: fotoProfil.diperbaruiAt,
       })
       .from(user)
+      .leftJoin(fotoProfil, eq(fotoProfil.userId, user.id))
       .where(eq(user.id, userId));
     return ok({
       userId,
@@ -116,6 +128,7 @@ export async function login(input: LoginInput): Promise<ActionResult<SesiInfo>> 
       nama: u.nama,
       role: u.role,
       mustChangePassword: u.mustChangePassword,
+      fotoVersi: u.fotoDiperbarui ? u.fotoDiperbarui.toISOString() : null,
     });
   } catch (e) {
     logServer("login", e);
@@ -142,7 +155,8 @@ function kodeApiError(e: unknown): string | undefined {
 
 /** Hapus sesi ini di DB dan cookie-nya (lewat plugin nextCookies). */
 export async function logout(): Promise<ActionResult<null>> {
-  return jalankan("logout", async () => {
+  return jalankan("logout", async (sesi) => {
+    if (termasukStaf(sesi.role)) await tandaiOffline(sesi.userId);
     await auth.api.signOut({ headers: await headers() });
     return ok(null);
   });
@@ -268,6 +282,42 @@ export async function setStatusPengguna(input: SetStatusPenggunaInput): Promise<
     const pengguna = await penggunaRingkas(userId);
     if (!pengguna) return fail("PENGGUNA_TIDAK_DITEMUKAN");
     return ok(pengguna);
+  });
+}
+
+/** Hapus akun salah input (super_admin). Aturan lengkap di server/hapus-akun.ts. */
+export async function hapusPengguna(input: HapusPenggunaInput): Promise<ActionResult<HapusPenggunaResult>> {
+  return jalankan("hapusPengguna", async (sesi) => {
+    const parsed = HapusPenggunaInputSchema.safeParse(input);
+    if (!parsed.success) return failDariZod(parsed.error);
+    // Foto profil ikut dihapus: baris di transaksi yang sama, file storage sesudah commit.
+    const foto: { path: string | null } = { path: null };
+    const hasil = await hapusAkun(sesi.userId, parsed.data, {
+      sebelumCommit: async (tx, id) => {
+        const [f] = await tx.delete(fotoProfil).where(eq(fotoProfil.userId, id)).returning({ path: fotoProfil.path });
+        foto.path = f?.path ?? null;
+      },
+    });
+    if (hasil.ok) await hapusFileFotoProfil(foto.path);
+    return hasil;
+  });
+}
+
+// ─── Foto profil (semua role) ───────────────────────────────────────────────
+
+/** FormData "foto" (+ "userId" opsional, super_admin saja untuk akun lain). Lihat server/foto/profil.ts. */
+export async function unggahFotoProfil(formData: FormData): Promise<ActionResult<FotoProfilResult>> {
+  return jalankan("unggahFotoProfil", async (sesi) => {
+    const { foto, userId } = parseFotoProfilFormData(formData);
+    return unggahFotoProfilUntuk(sesi, userId ?? sesi.userId, foto);
+  });
+}
+
+export async function hapusFotoProfil(input?: HapusFotoProfilInput): Promise<ActionResult<FotoProfilResult>> {
+  return jalankan("hapusFotoProfil", async (sesi) => {
+    const parsed = HapusFotoProfilInputSchema.safeParse(input ?? {});
+    if (!parsed.success) return failDariZod(parsed.error);
+    return hapusFotoProfilUntuk(sesi, parsed.data.userId ?? sesi.userId);
   });
 }
 

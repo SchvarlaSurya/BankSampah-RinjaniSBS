@@ -1,4 +1,5 @@
 import "server-only";
+import path from "node:path";
 import { env } from "../konfigurasi";
 import { fotoStorageLokal } from "./lokal";
 import { fotoStorageSupabase } from "./supabase";
@@ -13,6 +14,8 @@ export interface FotoStorage {
   simpan(path: string, data: Uint8Array, mime: string): Promise<void>;
   hapus(path: string): Promise<void>;
   urlBertandatangan(path: string, detik: number): Promise<UrlFoto>;
+  /** Isi objek (untuk route yang mengecek sesi, mis. foto profil). */
+  baca(path: string): Promise<Uint8Array>;
 }
 
 /** Umur URL foto untuk super_admin. */
@@ -27,4 +30,15 @@ export function fotoStorage(): FotoStorage {
       ? fotoStorageSupabase({ url: env.SUPABASE_URL!, kunci: env.SUPABASE_SERVICE_ROLE_KEY!, bucket: env.FOTO_BUCKET })
       : fotoStorageLokal({ dir: env.FOTO_LOCAL_DIR, rahasia: env.BETTER_AUTH_SECRET });
   return instans;
+}
+
+let instansProfil: FotoStorage | null = null;
+
+/** Penyimpanan foto profil: bucket privat FOTO_PROFIL_BUCKET / folder lokal "<FOTO_LOCAL_DIR>/profil". */
+export function fotoProfilStorage(): FotoStorage {
+  instansProfil ??=
+    env.FOTO_STORAGE === "supabase"
+      ? fotoStorageSupabase({ url: env.SUPABASE_URL!, kunci: env.SUPABASE_SERVICE_ROLE_KEY!, bucket: env.FOTO_PROFIL_BUCKET })
+      : fotoStorageLokal({ dir: path.join(env.FOTO_LOCAL_DIR, "profil"), rahasia: env.BETTER_AUTH_SECRET });
+  return instansProfil;
 }

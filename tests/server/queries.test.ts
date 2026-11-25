@@ -36,6 +36,7 @@ describe("getSesi", () => {
       nama: "Tes admin",
       role: "admin",
       mustChangePassword: true,
+      fotoVersi: null,
     });
     await owner`update public."user" set aktif = false where id = ${a.userId}`;
     expect(await sbg(b, () => getSesi())).toBeNull();

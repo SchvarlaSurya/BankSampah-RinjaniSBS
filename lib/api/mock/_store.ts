@@ -41,6 +41,10 @@ interface MockState {
   clientRequestIndex: Map<string, IdStr>;
   /** SHA-256 foto setor -> transaksiId (foto tidak boleh dipakai dua kali). */
   hashFoto: Map<string, IdStr>;
+  /** Log audit hapus akun (seperti tabel audit_akun). */
+  /** userId -> versi foto profil (mock tidak menyimpan file; route foto tetap 404). */
+  fotoProfil: Map<UserId, string>;
+  auditAkun: { pelakuId: UserId; targetUserId: UserId; targetUsername: string; alasan: string; waktu: string }[];
 }
 
 function buatState(): MockState {
@@ -175,11 +179,22 @@ function buatState(): MockState {
     transaksi,
     clientRequestIndex: new Map(),
     hashFoto: new Map(),
+    auditAkun: [],
+    fotoProfil: new Map(),
   };
 }
 
 const g = globalThis as typeof globalThis & { __bankSampahMock?: MockState };
 export const store: MockState = (g.__bankSampahMock ??= buatState());
+
+/** Sama dengan punyaRiwayatSql di backend: transaksi (nasabah/petugas), riwayat harga, log audit. */
+export function punyaRiwayat(id: UserId): boolean {
+  return (
+    store.transaksi.some((t) => t.customerId === id || t.dibuatOlehId === id) ||
+    store.riwayatHarga.some((r) => r.diubahOlehId === id) ||
+    store.auditAkun.some((a) => a.pelakuId === id)
+  );
+}
 
 export const nextId = () => String(++store.idSeq) as IdStr;
 export const nowIso = () => new Date().toISOString();

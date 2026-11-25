@@ -95,5 +95,6 @@ export function NavBawah({ items, akar }: { items: ItemNav[]; akar: string }) {
 export function JudulBagian({ items, akar }: { items: ItemNav[]; akar: string }) {
   const pathname = usePathname();
   const item = items.find(({ href }) => aktif(pathname, href, akar));
-  return <h1 className="truncate text-base font-semibold text-ink">{item?.label ?? items[0]?.label}</h1>;
+  const judul = pathname === `${akar}/akun` ? "Akun Saya" : (item?.label ?? items[0]?.label);
+  return <h1 className="truncate text-base font-semibold text-ink">{judul}</h1>;
 }

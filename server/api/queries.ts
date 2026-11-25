@@ -5,6 +5,7 @@ import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import {
   type ActionResult,
+  type AktivitasAdmin,
   type AuditInput,
   AuditInputSchema,
   type CariNasabahInput,
@@ -34,10 +35,12 @@ import {
   type TransaksiDetail,
   type TransaksiRingkas,
 } from "@/contract";
+import { muatAktivitasAdmin } from "../aktivitas-admin";
+import { alasanTidakBisaDihapus, idUserLuar, punyaRiwayatSql, superAdminLainSql } from "../hapus-akun";
 import { idKeNumber, keNumberAman } from "../angka";
 import { db } from "../db";
 import { user } from "../db/auth-schema";
-import { priceHistory, transactions, wasteTypes } from "../db/schema";
+import { fotoProfil, priceHistory, transactions, wasteTypes } from "../db/schema";
 import { logServer } from "../errors";
 import { requireAkses } from "../guards";
 import { muatTransaksiDetail, namaPembuatSql, sudahDibalikSql } from "../transaksi";
@@ -69,8 +72,8 @@ export async function getSesi(): Promise<SesiInfo | null> {
   try {
     const g = await requireAkses("getSesi");
     if (!g.ok) return null;
-    const { userId, username, nama, role, mustChangePassword } = g.sesi;
-    return { userId, username, nama, role, mustChangePassword };
+    const { userId, username, nama, role, mustChangePassword, fotoVersi } = g.sesi;
+    return { userId, username, nama, role, mustChangePassword, fotoVersi };
   } catch (e) {
     unstable_rethrow(e); // redirect/notFound/dynamic-usage milik Next tidak boleh tertelan
     logServer("getSesi", e);
@@ -245,8 +248,13 @@ export async function listPengguna(input?: ListPenggunaInput): Promise<ActionRes
         aktif: user.aktif,
         mustChangePassword: user.mustChangePassword,
         createdAt: user.createdAt,
+        // Hanya dihitung untuk super_admin (satu-satunya yang boleh menghapus akun).
+        punyaRiwayat: sesi.role === "super_admin" ? punyaRiwayatSql(idUserLuar) : sql<boolean>`true`,
+        superAdminLain: sesi.role === "super_admin" ? superAdminLainSql(idUserLuar) : sql<number>`0`,
+        fotoDiperbarui: fotoProfil.diperbaruiAt,
       })
       .from(user)
+      .leftJoin(fotoProfil, eq(fotoProfil.userId, user.id))
       .where(where)
       .orderBy(asc(user.role), asc(user.username))
       .limit(limit)
@@ -254,6 +262,10 @@ export async function listPengguna(input?: ListPenggunaInput): Promise<ActionRes
 
     const items = rows.map((u): PenggunaDetail => {
       const username = u.username ?? "";
+      const alasan =
+        sesi.role === "super_admin"
+          ? alasanTidakBisaDihapus({ id: u.id, role: u.role, punyaRiwayat: u.punyaRiwayat, superAdminLain: u.superAdminLain, pelakuId: sesi.userId })
+          : "TIDAK_DIIZINKAN";
       return {
         id: u.id,
         username,
@@ -263,6 +275,9 @@ export async function listPengguna(input?: ListPenggunaInput): Promise<ActionRes
         rt: u.role === "nasabah" && /^\d{2}/.test(username) ? username.slice(0, 2) : null,
         mustChangePassword: u.mustChangePassword,
         createdAt: u.createdAt.toISOString(),
+        bisaDihapus: alasan === null,
+        alasanTidakBisaDihapus: alasan,
+        fotoVersi: u.fotoDiperbarui ? u.fotoDiperbarui.toISOString() : null,
       };
     });
     return ok({ items, total, limit, offset });
@@ -374,6 +389,11 @@ export async function auditTransaksi(input: AuditInput): Promise<ActionResult<Ha
   });
 }
 
+/** Streak & Tim Admin. Hak lihat streak orang lain ditegakkan di muatAktivitasAdmin. */
+export async function getAktivitasAdmin(): Promise<ActionResult<AktivitasAdmin>> {
+  return jalankan("getAktivitasAdmin", async (sesi) => ok(await muatAktivitasAdmin(sesi)));
+}
+
 /** Objek untuk saklar frontend (lib/api/queries.ts). Dicek `Queries` oleh tsc. */
 export const realQueries: Queries = {
   getSesi,
@@ -387,4 +407,5 @@ export const realQueries: Queries = {
   getHistori,
   getTransaksi,
   auditTransaksi,
+  getAktivitasAdmin,
 };
