@@ -239,9 +239,9 @@ export function ok<T>(data: T): ActionResult<T> {
 
 export function fail(
   code: ErrorCode,
-  extra?: { fieldErrors?: Record<string, string[]>; retryAfterDetik?: number },
+  extra?: { fieldErrors?: Record<string, string[]>; retryAfterDetik?: number; message?: string },
 ): ActionResult<never> {
-  return { ok: false, code, message: ERROR_MESSAGES[code], ...extra };
+  return { ok: false, code, message: extra?.message || ERROR_MESSAGES[code], ...extra };
 }
 
 /** Ubah ZodError menjadi VALIDASI_GAGAL dengan fieldErrors per path. */

@@ -15,8 +15,15 @@ export function fotoStorageSupabase(opsi: { url: string; kunci: string; bucket: 
   const objek = (p: string) => `${encodeURIComponent(opsi.bucket)}/${p.split("/").map(encodeURIComponent).join("/")}`;
 
   async function pastikan(res: Response, aksi: string) {
-    // Isi respons tidak ikut dilempar: bisa memuat path; status cukup untuk log server.
-    if (!res.ok) throw new Error(`Supabase Storage ${aksi} gagal: HTTP ${res.status}`);
+    if (!res.ok) {
+      let detail = "";
+      try {
+        detail = await res.text();
+      } catch {
+        // abaikan jika pembacaan body gagal
+      }
+      throw new Error(`Supabase Storage ${aksi} gagal: HTTP ${res.status}${detail ? ` - ${detail}` : ""}`);
+    }
   }
 
   return {
