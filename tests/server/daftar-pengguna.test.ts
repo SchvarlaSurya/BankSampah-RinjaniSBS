@@ -38,6 +38,7 @@ describe("listPengguna", () => {
         aktif: true,
         rt,
         mustChangePassword: false,
+        fotoVersi: null,
         createdAt: expect.stringMatching(/Z$/),
         // Nasabah baru tanpa transaksi: boleh dihapus super_admin.
         bisaDihapus: true,
