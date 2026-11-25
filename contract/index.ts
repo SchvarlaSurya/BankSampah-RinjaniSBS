@@ -190,7 +190,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   KREDENSIAL_SALAH: "ID atau password salah.",
   TERLALU_BANYAK_PERCOBAAN: "Terlalu banyak percobaan. Coba lagi beberapa saat lagi.",
   VALIDASI_GAGAL: "Data yang dimasukkan belum benar. Periksa kembali isian Anda.",
-  SERVER_ERROR: "Terjadi kesalahan di server. Coba lagi, dan hubungi admin jika berulang.",
+  SERVER_ERROR: "Terjadi kesalahan server, coba lagi",
   PASSWORD_LAMA_SALAH: "Password lama salah.",
   USERNAME_SUDAH_ADA: "ID tersebut sudah dipakai.",
   PENGGUNA_TIDAK_DITEMUKAN: "Pengguna tidak ditemukan.",
