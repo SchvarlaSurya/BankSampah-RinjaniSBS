@@ -214,9 +214,12 @@ export function AuditView({
                           </span>
                           <span className="min-w-0 flex-1 md:flex md:items-center md:gap-6">
                             <span className="block min-w-0 md:w-64 md:shrink-0">
-                              <span className="block truncate font-medium text-ink">{tx.customerNama}</span>
+                              <span className="block truncate font-medium text-ink">
+                                {tx.customerNama || "Pengguna Dihapus"}
+                                {tx.customerUsername ? ` (@${tx.customerUsername})` : ""}
+                              </span>
                               <span className="block truncate text-sm text-ink-muted">
-                                <span className="tabular-nums">{jamWib(tx.waktu)}</span> · oleh {tx.dibuatOlehNama}
+                                <span className="tabular-nums">{jamWib(tx.waktu)}</span> · Dicatat oleh: {tx.dibuatOlehNama || "Petugas"}
                               </span>
                             </span>
                             <span className="mt-0.5 block truncate text-sm text-ink-muted md:mt-0 md:flex-1">
@@ -256,6 +259,18 @@ export function AuditView({
 
                       {terbukaIni && (
                         <div id={`audit-rinci-${tx.id}`} className="space-y-3 px-4 pb-4 sm:pl-[4.25rem] sm:pr-5">
+                          <div className="rounded-control bg-surface-muted/80 p-3 text-xs text-ink-muted">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div>
+                                <span className="font-medium text-ink">Nasabah:</span> {tx.customerNama || "Pengguna Dihapus"}
+                                {tx.customerUsername && <span className="tabular-nums"> (@{tx.customerUsername})</span>}
+                                <span className="text-ink-subtle"> · ID: {tx.customerId}</span>
+                              </div>
+                              <div>
+                                <span className="font-medium text-ink">Petugas Pencatat:</span> {tx.dibuatOlehNama || "Petugas"}
+                              </div>
+                            </div>
+                          </div>
                           {tx.items.length > 0 && (
                             <table className="w-full text-sm">
                               <caption className="sr-only">Rincian barang transaksi {tx.id}</caption>

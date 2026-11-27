@@ -197,12 +197,6 @@ export function SetorForm({
       return;
     }
 
-    if (!fotoFile) {
-      setErrorMessage(ERROR_MESSAGES.FOTO_WAJIB);
-      photoInputRef.current?.focus();
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -213,7 +207,7 @@ export function SetorForm({
           catatan: catatan || undefined,
           clientRequestId: clientRequestIdRef.current,
         },
-        fotoFile
+        fotoFile ?? undefined
       );
 
       const res = await actions.setor(formData);
@@ -406,7 +400,7 @@ export function SetorForm({
             title={
               <span className="flex items-center gap-2">
                 <Camera className="size-4 text-ink-muted" aria-hidden="true" />
-                Foto timbangan <span className="text-danger-fg">*</span>
+                Foto timbangan <span className="text-xs font-normal text-ink-muted">(opsional)</span>
               </span>
             }
             description={`JPG, PNG, atau WebP, maksimal ${BATAS_FOTO}.`}

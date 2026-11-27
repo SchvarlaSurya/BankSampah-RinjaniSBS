@@ -540,15 +540,17 @@ export type GetTransaksiInput = z.input<typeof GetTransaksiInputSchema>;
 /* 7. FORM DATA UNTUK setor() (ada file, jadi bukan objek biasa)               */
 /* ========================================================================== */
 /**
- * setor() menerima FormData dengan tepat dua field:
+ * setor() menerima FormData:
  *   "payload": JSON string dari SetorInput
- *   "foto"   : File (sudah dikompres klien)
+ *   "foto"   : File (opsional, sudah dikompres klien bila dilampirkan)
  * Frontend WAJIB memakai buildSetorFormData; backend WAJIB memakai parseSetorFormData.
  */
-export function buildSetorFormData(input: SetorInput, foto: File): FormData {
+export function buildSetorFormData(input: SetorInput, foto?: File | null): FormData {
   const fd = new FormData();
   fd.append("payload", JSON.stringify(input));
-  fd.append("foto", foto);
+  if (foto) {
+    fd.append("foto", foto);
+  }
   return fd;
 }
 
