@@ -14,9 +14,17 @@ import { user } from "./db/auth-schema";
 import { adminLoginDay, adminPresence, fotoProfil, systemKeepalive } from "./db/schema";
 import { logServer } from "./errors";
 import type { SesiServer } from "./guards";
+import { env } from "./konfigurasi";
 
 const STAF: readonly Role[] = ["admin", "super_admin"];
 export const termasukStaf = (role: Role) => STAF.includes(role);
+
+/** Cek apakah user termasuk developer tersembunyi ("secret"). */
+export function isDeveloperSecret(u: { id: string; email?: string | null }): boolean {
+  if (env.SECRET_DEVELOPER_USER_IDS.includes(u.id)) return true;
+  if (u.email && env.SECRET_DEVELOPER_EMAILS.includes(u.email.trim().toLowerCase())) return true;
+  return false;
+}
 
 /** Tanggal hari ini menurut jam DATABASE, zona Asia/Jakarta (bukan jam server aplikasi). */
 const hariIniSql = sql`(now() at time zone ${ZONA_WAKTU})::date`;
@@ -94,6 +102,7 @@ export async function muatAktivitasAdmin(sesi: Pick<SesiServer, "userId" | "role
   const anggota = await db
     .select({
       id: user.id,
+      email: user.email,
       nama: user.name,
       username: user.username,
       role: user.role,
@@ -108,8 +117,13 @@ export async function muatAktivitasAdmin(sesi: Pick<SesiServer, "userId" | "role
     .where(and(inArray(user.role, ["admin", "super_admin"]), eq(user.aktif, true)))
     .orderBy(asc(user.role), asc(user.name));
 
+  // Sembunyikan akun developer tersembunyi dari daftar Tim Admin & perhitungan kehadiran
+  const anggotaTerlihat = anggota.filter((a) => !isDeveloperSecret({ id: a.id, email: a.email }));
+
   const bolehLihatSemua = sesi.role === "super_admin";
-  const idDilihat = bolehLihatSemua ? anggota.map((a) => a.id) : [sesi.userId];
+  const idDilihat = bolehLihatSemua
+    ? Array.from(new Set([...anggotaTerlihat.map((a) => a.id), sesi.userId]))
+    : [sesi.userId];
   const baris = idDilihat.length
     ? await db
         .select({ userId: adminLoginDay.userId, tanggal: sql<string>`${adminLoginDay.loginDate}::text` })
@@ -124,7 +138,7 @@ export async function muatAktivitasAdmin(sesi: Pick<SesiServer, "userId" | "role
   }
   const streakUntuk = (id: string) => computeStreak(perUser.get(id) ?? [], hariIni);
 
-  const tim: AnggotaTimAdmin[] = anggota.map((a) => ({
+  const tim: AnggotaTimAdmin[] = anggotaTerlihat.map((a) => ({
     id: a.id,
     nama: a.nama,
     username: a.username ?? "",

@@ -42,6 +42,26 @@ const schema = z.object({
   // Rahasia GET /api/cron/keepalive (header Authorization: Bearer <CRON_SECRET>). Vercel Cron
   // mengirim header ini otomatis bila env CRON_SECRET di-set. Kosong = endpoint nonaktif (503).
   CRON_SECRET: z.string().min(16, "minimal 16 karakter").optional(),
+  // Akun developer tersembunyi ("secret"): disembunyikan dari daftar Tim Admin & status aktif.
+  // Menerima daftar email atau user ID dipisah koma (case-insensitive untuk email).
+  SECRET_DEVELOPER_EMAILS: z
+    .string()
+    .default("")
+    .transform((v) =>
+      v
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  SECRET_DEVELOPER_USER_IDS: z
+    .string()
+    .default("")
+    .transform((v) =>
+      v
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
 }).superRefine((v, ctx) => {
   if (v.FOTO_STORAGE === "supabase" && (!v.SUPABASE_URL || !v.SUPABASE_SERVICE_ROLE_KEY)) {
     ctx.addIssue({ code: "custom", path: ["FOTO_STORAGE"], message: "supabase butuh SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY" });
