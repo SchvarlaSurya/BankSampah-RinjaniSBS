@@ -69,7 +69,7 @@ describe("mock = backend", () => {
     expect(await q.getTransaksi({ id: "1003" })).toEqual(fail("TRANSAKSI_TIDAK_DITEMUKAN")); // milik Siti
   });
 
-  it("setor: payload dulu, lalu foto wajib, isi foto dicek, foto tidak boleh dipakai dua kali", async () => {
+  it("setor: payload dulu, isi foto dicek bila disertakan, foto tidak boleh dipakai dua kali", async () => {
     await masukSebagai(ADMIN);
     const input = { customerId: "user-nasabah-1", items: [{ wasteTypeId: "1", berat: "2" }], clientRequestId: randomUUID() };
     const fd = new FormData();
@@ -78,7 +78,8 @@ describe("mock = backend", () => {
     expect(!tanpaItem.ok && tanpaItem.code).toBe("VALIDASI_GAGAL");
     const tanpaFoto = new FormData();
     tanpaFoto.append("payload", JSON.stringify(input));
-    expect(await a.setor(tanpaFoto)).toEqual(fail("FOTO_WAJIB"));
+    const resTanpaFoto = await a.setor(tanpaFoto);
+    expect(resTanpaFoto.ok).toBe(true);
     expect(await a.setor(buildSetorFormData(input, fileFoto(bytesPng(), "image/jpeg")))).toEqual(fail("FOTO_TIDAK_VALID"));
 
     const foto = bytesJpeg();

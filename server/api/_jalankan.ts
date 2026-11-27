@@ -20,6 +20,7 @@ export async function jalankan<T>(
   } catch (e) {
     unstable_rethrow(e); // redirect/notFound/dynamic-usage milik Next tidak boleh tertelan
     logServer(nama, e);
-    return fail("SERVER_ERROR");
+    const detailPesan = e instanceof Error ? e.message : undefined;
+    return fail("SERVER_ERROR", detailPesan ? { message: `Terjadi kesalahan server, coba lagi (${detailPesan})` } : undefined);
   }
 }

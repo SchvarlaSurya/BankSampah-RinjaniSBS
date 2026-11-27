@@ -18,14 +18,19 @@ export function mimeDariIsi(b: Uint8Array): MimeFoto | null {
 
 export type HasilFoto =
   | { ok: true; bytes: Uint8Array; mime: MimeFoto; sha256: string; namaAcak: string }
+  | { ok: true; bytes: null; mime: null; sha256: null; namaAcak: null }
   | { ok: false; kode: "FOTO_WAJIB" | "FOTO_TIDAK_VALID" };
 
 export async function periksaFoto(foto: File | null): Promise<HasilFoto> {
-  if (!foto) return { ok: false, kode: "FOTO_WAJIB" };
+  if (!foto || foto.size === 0) {
+    return { ok: true, bytes: null, mime: null, sha256: null, namaAcak: null };
+  }
   if (!(FOTO_MIME as readonly string[]).includes(foto.type)) return { ok: false, kode: "FOTO_TIDAK_VALID" };
   if (foto.size > LIMIT.FOTO_MAKS_BYTES) return { ok: false, kode: "FOTO_TIDAK_VALID" };
   const bytes = new Uint8Array(await foto.arrayBuffer());
-  if (bytes.length === 0 || bytes.length > LIMIT.FOTO_MAKS_BYTES) return { ok: false, kode: "FOTO_TIDAK_VALID" };
+  if (bytes.length === 0 || bytes.length > LIMIT.FOTO_MAKS_BYTES) {
+    return { ok: true, bytes: null, mime: null, sha256: null, namaAcak: null };
+  }
   // Isi harus benar-benar gambar dan sesuai jenis yang diklaim.
   const mime = mimeDariIsi(bytes);
   if (mime === null || mime !== foto.type) return { ok: false, kode: "FOTO_TIDAK_VALID" };

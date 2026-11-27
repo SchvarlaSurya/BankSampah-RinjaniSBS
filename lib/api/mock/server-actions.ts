@@ -413,9 +413,14 @@ export async function setor(formData: FormData): Promise<ActionResult<MutasiResu
   const { payload, foto } = parseSetorFormData(formData);
   const parsed = SetorInputSchema.safeParse(payload);
   if (!parsed.success) return failDariZod(parsed.error);
-  if (!foto) return fail("FOTO_WAJIB");
-  const bytes = new Uint8Array(await foto.arrayBuffer());
-  if (!fotoValid(bytes, foto.type)) return fail("FOTO_TIDAK_VALID");
+  let hash: string | null = null;
+  if (foto && foto.size > 0) {
+    const bytes = new Uint8Array(await foto.arrayBuffer());
+    if (!fotoValid(bytes, foto.type)) return fail("FOTO_TIDAK_VALID");
+    hash = createHash("sha256").update(bytes).digest("hex");
+    const pemakai = store.hashFoto.get(hash);
+    if (pemakai && !store.transaksi.find((t) => t.id === pemakai)?.sudahDibalik) return fail("FOTO_SUDAH_DIPAKAI");
+  }
 
   const duplikat = hasilDuplikat(parsed.data.clientRequestId, {
     tipe: "setor",
@@ -424,11 +429,6 @@ export async function setor(formData: FormData): Promise<ActionResult<MutasiResu
     membalikId: null,
   });
   if (duplikat) return duplikat;
-
-  // Foto yang sama hanya boleh dipakai lagi bila setor sebelumnya sudah dikoreksi.
-  const hash = createHash("sha256").update(bytes).digest("hex");
-  const pemakai = store.hashFoto.get(hash);
-  if (pemakai && !store.transaksi.find((t) => t.id === pemakai)?.sudahDibalik) return fail("FOTO_SUDAH_DIPAKAI");
 
   const nasabah = store.nasabah.find((n) => n.id === parsed.data.customerId);
   if (!nasabah) return fail("NASABAH_TIDAK_DITEMUKAN");
@@ -464,8 +464,8 @@ export async function setor(formData: FormData): Promise<ActionResult<MutasiResu
     customerNama: nasabah.nama,
     customerUsername: nasabah.username,
     items,
-    fotoUrl: "https://placehold.co/400x300/2d9e5f/ffffff?text=Foto+Timbangan",
-    fotoUrlBerlakuHingga: "2026-12-31T23:59:59.000Z",
+    fotoUrl: hash ? "https://placehold.co/400x300/2d9e5f/ffffff?text=Foto+Timbangan" : null,
+    fotoUrlBerlakuHingga: hash ? "2026-12-31T23:59:59.000Z" : null,
     sudahDibalik: false,
     membalikId: null,
     dibalikOlehId: null,
@@ -473,7 +473,7 @@ export async function setor(formData: FormData): Promise<ActionResult<MutasiResu
 
   store.transaksi.push(newTransaksi);
   store.clientRequestIndex.set(parsed.data.clientRequestId, newTransaksi.id);
-  store.hashFoto.set(hash, newTransaksi.id);
+  if (hash) store.hashFoto.set(hash, newTransaksi.id);
   nasabah.saldo += totalJumlah;
 
   return ok({

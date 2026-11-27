@@ -415,9 +415,13 @@ export async function setor(formData: FormData): Promise<ActionResult<MutasiResu
     if (items === null) return fail("JENIS_SAMPAH_TIDAK_VALID");
 
     const storage = fotoStorage();
-    await storage.simpan(f.namaAcak, f.bytes, f.mime);
+    if (f.namaAcak && f.bytes && f.mime) {
+      await storage.simpan(f.namaAcak, f.bytes, f.mime);
+    }
     const hapusFotoBaru = () =>
-      storage.hapus(f.namaAcak).catch((e: unknown) => logServer("setor:hapus-foto", e));
+      f.namaAcak
+        ? storage.hapus(f.namaAcak).catch((e: unknown) => logServer("setor:hapus-foto", e))
+        : Promise.resolve();
 
     let hasil;
     try {
@@ -425,7 +429,7 @@ export async function setor(formData: FormData): Promise<ActionResult<MutasiResu
         select * from public.setor(
           ${input.customerId}, ${sesi.userId},
           ${input.clientRequestId}::uuid, ${items}::text::jsonb,
-          ${f.namaAcak}, ${f.sha256}, ${input.catatan || null}
+          ${f.namaAcak ?? null}, ${f.sha256 ?? null}, ${input.catatan || null}
         )`);
     } catch (e) {
       // Hanya bila DB menjawab dengan error (statement pasti di-rollback). Gangguan koneksi:

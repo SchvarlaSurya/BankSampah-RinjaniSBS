@@ -42,20 +42,20 @@ async function setorSebagai(b: Browser, customerId = nasabah.userId, bytes = byt
 }
 
 describe("getTransaksi", () => {
-  it("nasabah hanya transaksinya sendiri (lainnya TRANSAKSI_TIDAK_DITEMUKAN); fotoUrl hanya super_admin", async () => {
+  it("nasabah hanya transaksinya sendiri (lainnya TRANSAKSI_TIDAK_DITEMUKAN); fotoUrl untuk pemilik, admin, & super_admin", async () => {
     const milik = await setorSebagai(admin);
     const lain = await buatAkun("nasabah");
     const punyaLain = await setorSebagai(admin, lain.userId);
 
     const own = await sbg(bNasabah, () => getTransaksi({ id: milik.id }));
-    expect(own.ok && own.data.fotoUrl).toBeNull();
+    expect(own.ok && own.data.fotoUrl).toMatch(/^\/api\/dev-foto\//);
     expect(await sbg(bNasabah, () => getTransaksi({ id: punyaLain.id }))).toEqual(fail("TRANSAKSI_TIDAK_DITEMUKAN"));
     expect(await sbg(bNasabah, () => getTransaksi({ id: "900000000000" }))).toEqual(fail("TRANSAKSI_TIDAK_DITEMUKAN"));
     const salah = await sbg(bNasabah, () => getTransaksi({ id: "abc" }));
     expect(!salah.ok && salah.code).toBe("VALIDASI_GAGAL");
 
     const viaAdmin = await sbg(admin, () => getTransaksi({ id: punyaLain.id }));
-    expect(viaAdmin.ok && viaAdmin.data.fotoUrl).toBeNull();
+    expect(viaAdmin.ok && viaAdmin.data.fotoUrl).toMatch(/^\/api\/dev-foto\//);
     const viaSa = await sbg(superAdmin, () => getTransaksi({ id: punyaLain.id }));
     expect(viaSa.ok && viaSa.data.fotoUrl).toMatch(/^\/api\/dev-foto\//);
   });

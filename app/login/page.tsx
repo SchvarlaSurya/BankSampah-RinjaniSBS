@@ -62,20 +62,34 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas lg:flex-row">
-      {/* Blok merek (publik, ekspresif): hijau tua, judul condensed senada wordmark logo. */}
+      {/* Blok merek (publik, ekspresif): latar foto Gunung Rinjani dengan overlay hijau tua elegan */}
       <section className="relative overflow-hidden bg-brand-deep text-white lg:flex lg:w-[46%] lg:flex-col lg:justify-between">
+        {/* Background Foto Gunung Rinjani dengan overlay lembut & tidak mencolok */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat opacity-25 mix-blend-luminosity scale-105"
+          style={{ backgroundImage: "url('/rinjani-bg.webp')" }}
+        />
+        {/* Gradien pelapis agar kontras teks tetap optimal dan nyaman dipandang */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-brand-deep/90 via-brand-deep/80 to-brand-deep"
+        />
+
         <div className="relative z-10 px-6 pt-7 pb-16 sm:px-10 sm:pt-10 sm:pb-20 lg:px-14 lg:pt-14">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="flex shrink-0 items-center justify-center rounded-2xl bg-white p-2 shadow-sm sm:p-2.5">
-              <LogoSbs className="w-14 sm:w-16 lg:w-20" priority />
+          <div className="flex items-center gap-4 sm:gap-5">
+            <div className="shrink-0 drop-shadow-sm">
+              <LogoSbs className="w-20 sm:w-24 lg:w-28 drop-shadow" priority />
             </div>
             <div>
               <p className="text-xs font-semibold tracking-[0.2em] text-white/80 uppercase">Bank Sampah</p>
-              <p className="font-display text-xl leading-none font-bold tracking-wide uppercase sm:text-2xl lg:text-3xl">SBS Rinjani</p>
+              <p className="font-display text-2xl leading-none font-bold tracking-wide uppercase sm:text-3xl lg:text-4xl text-white">
+                SBS Rinjani
+              </p>
             </div>
           </div>
 
-          <h1 className="mt-6 max-w-md font-display text-4xl leading-[0.95] font-extrabold tracking-tight uppercase sm:mt-10 sm:text-6xl lg:mt-24 lg:text-7xl">
+          <h1 className="mt-8 max-w-md font-display text-4xl leading-[0.95] font-extrabold tracking-tight uppercase sm:mt-12 sm:text-6xl lg:mt-24 lg:text-7xl drop-shadow-sm">
             Sampah terpilah, saldo tercatat.
           </h1>
           <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/85 sm:mt-5 sm:text-base">

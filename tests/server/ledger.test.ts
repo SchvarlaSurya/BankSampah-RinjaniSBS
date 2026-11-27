@@ -81,8 +81,8 @@ describe("setor (FormData + foto)", () => {
       dibuatOlehId: k.adminAkun.userId,
       items: [{ wasteTypeId: k.jenis, namaSampah: expect.any(String), berat: "2.50", hargaSnapshot: 3000, subtotal: 7500 }],
       dibalikOlehId: null,
-      fotoUrl: null, // admin tidak mendapat fotoUrl
-      fotoUrlBerlakuHingga: null,
+      fotoUrl: expect.stringMatching(/^\/api\/dev-foto\//),
+      fotoUrlBerlakuHingga: expect.any(String),
     });
 
     expect(await sbg(k.admin, () => getTransaksi({ id: transaksi.id }))).toEqual({ ok: true, data: transaksi });
@@ -142,7 +142,7 @@ describe("setor (FormData + foto)", () => {
     }
   });
 
-  it("foto palsu / jenis tidak cocok / terlalu besar -> FOTO_TIDAK_VALID; tanpa foto -> FOTO_WAJIB; tidak ada file tersisa", async () => {
+  it("foto palsu / jenis tidak cocok / terlalu besar -> FOTO_TIDAK_VALID; tanpa foto -> transaksi sukses (opsional); tidak ada file tersisa", async () => {
     const sebelum = await isiDirFoto();
     const teks = new TextEncoder().encode("ini bukan gambar, cuma teks");
     const kasus: [File | null, string][] = [
@@ -150,14 +150,19 @@ describe("setor (FormData + foto)", () => {
       [fileFoto(bytesJpeg(), "image/png", "a.png"), "FOTO_TIDAK_VALID"],
       [fileFoto(bytesJpeg(), "image/gif", "a.gif"), "FOTO_TIDAK_VALID"],
       [fileFoto(bytesJpeg(LIMIT.FOTO_MAKS_BYTES), "image/jpeg"), "FOTO_TIDAK_VALID"],
-      [null, "FOTO_WAJIB"],
-      [fileFoto(new Uint8Array(0)), "FOTO_WAJIB"],
     ];
     for (const [foto, kode] of kasus) {
       const h = await sbg(k.admin, () => setor(formSetor({}, foto)));
       expect(h.ok || h.code).toBe(kode);
     }
     expect(await isiDirFoto()).toEqual(sebelum);
+
+    // Setor tanpa foto berhasil disimpan (foto opsional)
+    const tanpaFotoRes = await sbg(k.admin, () => setor(formSetor({}, null)));
+    expect(tanpaFotoRes.ok).toBe(true);
+    if (tanpaFotoRes.ok) {
+      expect(tanpaFotoRes.data.transaksi.fotoUrl).toBeNull();
+    }
   });
 
   it("payload tidak valid -> VALIDASI_GAGAL (sebelum foto diperiksa)", async () => {
